@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Try It in Your Room | Mirror House Melbourne</title>
+  <meta name="description" content="See a Mirror House mirror in your own room. Load a photo, mark the back wall and place a real-size mirror with a live reflection. Your photo stays on your device.">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Try It in Your Room | Mirror House Melbourne">
+  <meta property="og:description" content="Place a real-size mirror in a photo of your room and see the reflection in 3D.">
+  <meta property="og:image" content="/images/og-image.jpg">
+  <meta property="og:locale" content="en_AU">
+
+  <link rel="stylesheet" href="/css/theme.css">
+
+  <style>
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+    .announcement-divider { opacity: 0.6; }
+
+    /* ---------- intro ---------- */
+    .viz-intro { padding-block: 26px 20px; display: grid; gap: 10px; justify-items: start; }
+    .viz-title {
+      font-family: var(--font-serif); font-weight: 500; margin: 0;
+      font-size: clamp(2rem, 3.8vw, 2.9rem); line-height: 1.04; letter-spacing: -0.01em;
+    }
+    .viz-lede { margin: 0; color: var(--ink-2); max-width: 62ch; font-size: 0.98rem; }
+
+    /* ---------- layout ---------- */
+    .viz-layout {
+      display: grid; grid-template-columns: minmax(300px, 370px) minmax(0, 1fr);
+      gap: 24px; align-items: start; padding-bottom: clamp(48px, 7vw, 88px);
+    }
+    .viz-panel { padding: 0; gap: 0; }
+    .viz-step { padding: 20px 22px; display: grid; gap: 12px; border-top: 1px solid var(--line); min-width: 0; }
+    .viz-step:first-child { border-top: 0; }
+    .step-head {
+      margin: 0; display: flex; align-items: center; gap: 12px;
+      font-family: var(--font-serif); font-weight: 500; font-size: 1.42rem; line-height: 1.1;
+    }
+    .step-num {
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+      font-family: var(--font-sans); font-size: 0.78rem; font-weight: 600; letter-spacing: 0;
+      background: var(--ink); color: var(--on-dark);
+    }
+    .viz-step[data-done="true"] .step-num { background: var(--brass-deep); }
+    .step-copy { margin: 0; font-size: 0.88rem; color: var(--muted); line-height: 1.5; }
+
+    .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .viz-page .filter-pill { min-height: 44px; padding-inline: 16px; }
+
+    .drop-zone {
+      position: relative; display: grid; gap: 2px; justify-items: center; text-align: center;
+      padding: 16px 14px; border: 1px dashed #B8AC9C; border-radius: var(--radius);
+      background: var(--bg); cursor: pointer; transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.is-over { border-color: var(--brass); background: color-mix(in srgb, var(--brass) 7%, var(--bg)); }
+    .drop-zone:focus-within { outline: 2px solid var(--brass); outline-offset: 3px; }
+    .drop-zone strong { font-weight: 500; font-size: 0.92rem; }
+    .drop-zone small { color: var(--muted); font-size: 0.78rem; line-height: 1.45; }
+    .drop-zone input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    .viz-msg { margin: 0; font-size: 0.84rem; line-height: 1.45; color: var(--ink-2); }
+    .viz-msg:empty { display: none; }
+    .viz-msg.error { color: #9A2E22; }
+
+    .slider-field { display: grid; gap: 2px; }
+    .slider-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .slider-top label { font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+    .slider-top output { font-variant-numeric: tabular-nums; font-size: 0.88rem; font-weight: 500; }
+    .slider-field input[type="range"] { width: 100%; height: 32px; margin: 0; accent-color: var(--brass-deep); }
+    .slider-field small { color: var(--muted); font-size: 0.76rem; line-height: 1.4; }
+    .room-size {
+      margin: 0; padding: 10px 12px; background: var(--sand); border-radius: var(--radius);
+      font-size: 0.86rem; font-variant-numeric: tabular-nums; color: var(--ink-2);
+    }
+    .room-size strong { color: var(--ink); font-weight: 500; }
+
+    .mirror-list { display: grid; gap: 8px; }
+    .mirror-card {
+      display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 12px; align-items: center;
+      width: 100%; padding: 8px; text-align: left; cursor: pointer;
+      background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .mirror-card:hover { border-color: #C9BBA7; }
+    .mirror-card[aria-checked="true"] {
+      border-color: var(--brass); box-shadow: inset 0 0 0 1px var(--brass);
+      background: color-mix(in srgb, var(--brass) 7%, var(--bg));
+    }
+    .mirror-thumb {
+      width: 60px; height: 75px; border-radius: 2px; overflow: hidden; background: var(--sand);
+      display: grid; place-items: center;
+    }
+    .mirror-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .mirror-thumb svg { width: 70%; height: 80%; }
+    .mirror-text { display: grid; gap: 2px; min-width: 0; }
+    .mirror-name { font-family: var(--font-serif); font-size: 1.08rem; line-height: 1.15; }
+    .mirror-meta { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .mirror-meta .price { color: var(--ink); font-weight: 500; }
+    .soon-tag {
+      justify-self: start; font-size: 0.64rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--brass-deep); background: color-mix(in srgb, var(--brass) 12%, transparent);
+      padding: 2px 8px; border-radius: 999px;
+    }
+
+    .option-group { display: grid; gap: 6px; border: 0; padding: 0; margin: 0; min-width: 0; }
+    .option-group legend, .option-label { padding: 0; margin-bottom: 6px; font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+    .selected-line {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px;
+      padding-top: 12px; border-top: 1px solid var(--line);
+    }
+    .selected-line strong { font-family: var(--font-serif); font-weight: 500; font-size: 1.2rem; line-height: 1.15; }
+    .dims { font-variant-numeric: tabular-nums; font-size: 0.86rem; color: var(--ink-2); }
+    #add-to-bag-btn { width: 100%; }
+
+    /* ---------- 3D stage ---------- */
+    .viz-stage { position: sticky; top: 92px; min-width: 0; }
+    .viz-viewport {
+      position: relative; overflow: hidden; border-radius: var(--radius);
+      height: max(70vh, min(calc(100vh - 130px), 860px)); min-height: 420px;
+      background: var(--espresso); color: var(--on-dark);
+    }
+    .viz-viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+    .viz-viewport.is-dragging canvas { cursor: grabbing; }
+    .viz-toolbar { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 3; }
+    .chip-btn {
+      display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px;
+      border: 0; border-radius: 999px; cursor: pointer;
+      background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--ink);
+      font-size: 0.74rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+      box-shadow: 0 2px 10px rgba(29, 26, 23, 0.18);
+    }
+    .chip-btn:hover { background: var(--surface); }
+    .chip-btn.dark { background: var(--ink); color: var(--on-dark); }
+    .chip-btn.dark:hover { background: var(--brass-deep); }
+    .viz-hint {
+      position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 2;
+      width: max-content; max-width: calc(100% - 24px); text-align: center; pointer-events: none;
+      background: rgba(29, 26, 23, 0.66); color: var(--on-dark);
+      font-size: 0.78rem; line-height: 1.35; padding: 7px 14px; border-radius: 999px;
+    }
+    .viz-cover {
+      position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; text-align: center;
+      padding: 24px; background: var(--espresso); color: var(--on-dark);
+    }
+    .viz-cover[hidden] { display: none; }
+    .viz-cover p { margin: 0 auto; max-width: 44ch; font-size: 0.95rem; color: var(--on-dark); }
+    .viz-cover .cover-title { font-family: var(--font-serif); font-size: 1.6rem; margin-bottom: 8px; }
+
+    /* ---------- 2D wall editor ---------- */
+    .wall-editor { position: absolute; inset: 0; z-index: 4; background: #191613; }
+    .wall-editor[hidden] { display: none; }
+    .editor-bar {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap;
+      padding: 10px 12px; color: var(--on-dark); font-size: 0.84rem;
+    }
+    .editor-bar strong { font-weight: 500; letter-spacing: 0.04em; }
+    .editor-frame { position: absolute; }
+    .editor-frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .editor-guides { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+    .editor-guides line { stroke: rgba(243, 236, 226, 0.75); stroke-width: 1.2; stroke-dasharray: 5 4; }
+    .wall-rect {
+      position: absolute; cursor: move; touch-action: none;
+      outline: 2px solid #E3C98F; box-shadow: 0 0 0 4000px rgba(20, 17, 14, 0.38);
+    }
+    .handle {
+      position: absolute; z-index: 2; width: 44px; height: 44px; padding: 0; margin: 0;
+      border: 0; background: transparent; touch-action: none;
+    }
+    .handle::after {
+      content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      width: 18px; height: 18px; border-radius: 50%; background: #FFFDF9; border: 2px solid var(--brass);
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+    }
+    .handle:focus-visible { outline: none; }
+    .handle:focus-visible::after { box-shadow: 0 0 0 3px #E3C98F, 0 1px 5px rgba(0, 0, 0, 0.45); }
+    .handle[data-h="tl"] { left: -22px; top: -22px; cursor: nwse-resize; }
+    .handle[data-h="tr"] { right: -22px; top: -22px; cursor: nesw-resize; }
+    .handle[data-h="bl"] { left: -22px; bottom: -22px; cursor: nesw-resize; }
+    .handle[data-h="br"] { right: -22px; bottom: -22px; cursor: nwse-resize; }
+    .handle.edge { z-index: 1; }
+    .handle.edge::after { border-radius: 3px; }
+    .handle[data-h="t"], .handle[data-h="b"] { left: 22px; width: calc(100% - 44px); cursor: ns-resize; }
+    .handle[data-h="t"] { top: -22px; }
+    .handle[data-h="b"] { bottom: -22px; }
+    .handle[data-h="t"]::after, .handle[data-h="b"]::after { width: 30px; height: 8px; }
+    .handle[data-h="l"], .handle[data-h="r"] { top: 22px; height: calc(100% - 44px); cursor: ew-resize; }
+    .handle[data-h="l"] { left: -22px; }
+    .handle[data-h="r"] { right: -22px; }
+    .handle[data-h="l"]::after, .handle[data-h="r"]::after { width: 8px; height: 30px; }
+    .horizon-line { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed rgba(255, 253, 249, 0.9); z-index: 2; }
+    .horizon-handle {
+      position: absolute; left: 6px; top: -22px; height: 44px; padding: 0 4px; border: 0; background: transparent;
+      cursor: ns-resize; touch-action: none; display: flex; align-items: center;
+    }
+    .horizon-handle span {
+      background: #FFFDF9; color: var(--ink); border: 2px solid var(--brass); border-radius: 999px;
+      font-size: 0.7rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 10px;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4); white-space: nowrap;
+    }
+    .horizon-handle:focus-visible { outline: none; }
+    .horizon-handle:focus-visible span { box-shadow: 0 0 0 3px #E3C98F; }
+    .editor-readout {
+      position: absolute; left: 12px; bottom: 12px; z-index: 3; max-width: calc(100% - 24px);
+      background: rgba(29, 26, 23, 0.72); color: var(--on-dark); font-size: 0.78rem; font-variant-numeric: tabular-nums;
+      padding: 6px 12px; border-radius: 999px;
+    }
+
+    .viz-footer { background: var(--espresso); color: var(--on-dark-muted); padding-block: 28px; font-size: 0.82rem; }
+    .viz-footer .container { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; }
+    .viz-footer a { color: var(--on-dark); }
+
+    @media (max-width: 900px) {
+      .viz-layout { grid-template-columns: minmax(0, 1fr); }
+      .viz-stage { position: static; }
+      .viz-viewport { height: 60vh; min-height: 360px; }
+    }
+    @media (max-width: 520px) {
+      .viz-step { padding: 18px 16px; }
+      .viz-intro { padding-block: 20px 16px; }
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="/js/visualiser.js"></script>
+</head>
+<body class="viz-page">
+
+  <aside class="announcement-bar" aria-label="Store announcement">
+    <span>Free fragile freight on orders over $150 · 30-day in-home trial</span>
+    <span class="announcement-divider" aria-hidden="true">|</span>
+    <span>Use code <strong>WELCOME10</strong> for 10% off your first order</span>
+  </aside>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand-logo">
+        <a href="/" class="brand-title">MIRROR HOUSE</a>
+        <span class="brand-subtitle">Melbourne • Architectural Mirrors & Homewares</span>
+      </div>
+
+      <nav class="site-nav" aria-label="Primary">
+        <ul class="nav-links">
+          <li><a href="/" class="nav-link">Shop All</a></li>
+          <li><a href="/#curated-showcase" class="nav-link">Arch Mirrors</a></li>
+          <li><a href="/visualiser.html" class="nav-link active" aria-current="page">Try in your room</a></li>
+          <li><a href="/#guarantee-section" class="nav-link">Delivery Promise</a></li>
+          <li><a href="/#faq-section" class="nav-link">Hanging & FAQ</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <button class="action-btn open-cart-btn" aria-label="View shopping bag" aria-controls="cart-drawer" title="Shopping Bag">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+          <span class="cart-count-badge" aria-live="polite">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container viz-intro">
+      <span class="hero-tag">Try it in your room</span>
+      <h1 class="viz-title">See the mirror on your wall first</h1>
+      <p class="viz-lede">Use a sample room or a photo of your own, mark the wall you're facing, then place a mirror at its real size. The reflection is live, so you can look around and see what it picks up. Your photo stays on your device.</p>
+    </div>
+
+    <div class="container viz-layout">
+      <!-- Controls -->
+      <div class="panel viz-panel">
+        <section class="viz-step" id="step-room" aria-labelledby="step-room-title" data-done="true">
+          <h2 class="step-head" id="step-room-title"><span class="step-num" aria-hidden="true">1</span>Choose a room</h2>
+          <div class="pill-row" role="group" aria-label="Sample rooms">
+            <button type="button" class="filter-pill" id="sample-living" data-sample="living" aria-pressed="true">Living room sample</button>
+            <button type="button" class="filter-pill" id="sample-bedroom" data-sample="bedroom" aria-pressed="false">Bedroom sample</button>
+          </div>
+          <label class="drop-zone" id="drop-zone" for="photo-input">
+            <input type="file" id="photo-input" accept="image/*,.heic,.heif">
+            <strong>Upload your photo</strong>
+            <small>Drop it here or tap to browse. Stand back and shoot straight at the wall, with some floor in view.</small>
+          </label>
+          <p class="viz-msg" id="photo-msg" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="viz-step" id="step-wall" aria-labelledby="step-wall-title" data-done="true">
+          <h2 class="step-head" id="step-wall-title"><span class="step-num" aria-hidden="true">2</span>Mark the back wall</h2>
+          <p class="step-copy">Drag the frame onto the four corners of the wall you're facing. Set the dashed line to eye level, where the floor and ceiling lines would meet.</p>
+          <button type="button" class="btn btn-secondary" id="edit-wall-btn" aria-controls="wall-editor" aria-expanded="false">Mark the wall</button>
+          <div class="slider-field">
+            <div class="slider-top"><label for="lens-input">Lens</label><output id="lens-value" for="lens-input">66°</output></div>
+            <input type="range" id="lens-input" min="45" max="90" step="1" value="66">
+            <small>Phone main camera is about 66°. Go higher for ultra-wide shots.</small>
+          </div>
+          <div class="slider-field">
+            <div class="slider-top"><label for="height-input">Camera height</label><output id="height-value" for="height-input">1.50 m</output></div>
+            <input type="range" id="height-input" min="1.2" max="1.8" step="0.05" value="1.5">
+            <small>How high the camera was off the floor. This sets the room's scale.</small>
+          </div>
+          <p class="room-size" id="room-size" aria-live="polite">Room size: measuring…</p>
+        </section>
+
+        <section class="viz-step" id="step-mirror" aria-labelledby="step-mirror-title" data-done="true">
+          <h2 class="step-head" id="step-mirror-title"><span class="step-num" aria-hidden="true">3</span>Choose a mirror</h2>
+          <div class="mirror-list" id="mirror-list" role="radiogroup" aria-labelledby="step-mirror-title"></div>
+
+          <fieldset class="option-group" id="wall-group">
+            <legend>Wall</legend>
+            <div class="pill-row">
+              <button type="button" class="filter-pill" id="wall-back" data-wall="back" aria-pressed="true">Back</button>
+              <button type="button" class="filter-pill" id="wall-left" data-wall="left" aria-pressed="false">Left</button>
+              <button type="button" class="filter-pill" id="wall-right" data-wall="right" aria-pressed="false">Right</button>
+            </div>
+          </fieldset>
+
+          <fieldset class="option-group" id="mount-group">
+            <legend>Placement</legend>
+            <div class="pill-row">
+              <button type="button" class="filter-pill" id="mount-lean" data-mount="lean" aria-pressed="true">Lean on floor</button>
+              <button type="button" class="filter-pill" id="mount-hang" data-mount="hang" aria-pressed="false">Hang on wall</button>
+            </div>
+          </fieldset>
+
+          <div class="selected-line">
+            <strong id="mirror-selected-name">Grand Royale Arch</strong>
+            <span class="dims" id="mirror-dims" aria-live="polite">75 × 195 cm</span>
+          </div>
+          <button type="button" class="btn btn-primary" id="add-to-bag-btn" data-add="grand-royale-arched-brass-floor-mirror">Add to bag · $1,290</button>
+        </section>
+      </div>
+
+      <!-- 3D view -->
+      <section class="viz-stage" aria-label="3D room preview">
+        <div class="viz-viewport" id="viewport">
+          <div class="viz-toolbar">
+            <button type="button" class="chip-btn" id="reset-view-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+              Reset view
+            </button>
+          </div>
+          <p class="viz-hint" id="viz-hint">Drag the mirror to move it · drag the room to look around</p>
+
+          <div class="wall-editor" id="wall-editor" hidden>
+            <div class="editor-bar" id="editor-bar">
+              <strong>Mark the back wall</strong>
+              <button type="button" class="chip-btn dark" id="wall-done-btn">Done</button>
+            </div>
+            <div class="editor-frame" id="editor-frame">
+              <canvas id="editor-canvas" aria-hidden="true"></canvas>
+              <svg class="editor-guides" id="editor-guides" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+              <div class="horizon-line" id="horizon-line">
+                <button type="button" class="horizon-handle" id="handle-horizon" data-h="hz" aria-label="Eye level line. Use up and down arrow keys to move."><span>Eye level</span></button>
+              </div>
+              <div class="wall-rect" id="wall-rect" data-h="move">
+                <button type="button" class="handle edge" id="handle-t" data-h="t" aria-label="Top edge of back wall (ceiling line). Arrow keys move it."></button>
+                <button type="button" class="handle edge" id="handle-b" data-h="b" aria-label="Bottom edge of back wall (floor line). Arrow keys move it."></button>
+                <button type="button" class="handle edge" id="handle-l" data-h="l" aria-label="Left edge of back wall. Arrow keys move it."></button>
+                <button type="button" class="handle edge" id="handle-r" data-h="r" aria-label="Right edge of back wall. Arrow keys move it."></button>
+                <button type="button" class="handle" id="handle-tl" data-h="tl" aria-label="Top-left corner of back wall. Arrow keys move it."></button>
+                <button type="button" class="handle" id="handle-tr" data-h="tr" aria-label="Top-right corner of back wall. Arrow keys move it."></button>
+                <button type="button" class="handle" id="handle-bl" data-h="bl" aria-label="Bottom-left corner of back wall. Arrow keys move it."></button>
+                <button type="button" class="handle" id="handle-br" data-h="br" aria-label="Bottom-right corner of back wall. Arrow keys move it."></button>
+              </div>
+            </div>
+            <p class="editor-readout" id="editor-readout" aria-hidden="true"></p>
+          </div>
+
+          <div class="viz-cover" id="viz-cover">
+            <div>
+              <p class="cover-title" id="viz-cover-title">Setting up your room…</p>
+              <p id="viz-cover-text">Loading the 3D view.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="viz-footer">
+    <div class="container">
+      <span>© 2026 Mirror House Melbourne. Previews are a guide; sizes are to scale for the camera height you set.</span>
+      <a href="/">Back to the shop</a>
+    </div>
+  </footer>
+
+  <script src="/js/store.js"></script>
+  <script>
+    // If the 3D module can't load (offline, blocked CDN), say so instead of spinning forever.
+    setTimeout(function () {
+      if (window.mhViz) return;
+      var t = document.getElementById('viz-cover-title');
+      var p = document.getElementById('viz-cover-text');
+      if (t && p) {
+        t.textContent = "The 3D view didn't load";
+        p.textContent = 'Check your connection and refresh the page. If it keeps happening, try the latest Chrome, Safari or Edge.';
+      }
+    }, 12000);
+  </script>
+</body>
+</html>
