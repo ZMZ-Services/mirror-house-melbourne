@@ -15,8 +15,10 @@
     "run_worker_first": ["/api/*", "/admin*"]
   },
 
-  // database_id is filled in by scripts/ensure-d1.mjs on the first deploy.
-  // Locally, `wrangler dev` uses a local SQLite copy keyed by the binding name.
+  // No database_id on purpose: on the first `wrangler deploy` (Workers Builds), Wrangler's
+  // automatic provisioning creates "mirror-house-db" and later deploys find it by name.
+  // `npm run deploy` then applies migrations/ to it. Locally, `wrangler dev` uses a local copy.
+  // ADMIN_PASSWORD is a Worker secret set in the Cloudflare dashboard, not in this file.
   "d1_databases": [
     {
       "binding": "DB",
