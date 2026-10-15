@@ -66,7 +66,10 @@
   function $(sel, root) { return (root || document).querySelector(sel); }
   function imageFor(slug) { return IMG[slug] || '/images/products/' + slug + '.jpg'; }
   function productUrl(slug) { return '/product.html?slug=' + encodeURIComponent(slug); }
-  function query(name) { try { return new URLSearchParams(location.search).get(name); } catch (e) { return null; } }
+  // The single-file version passes the route's query string in MH_ROUTE_QUERY.
+  function query(name) {
+    try { return new URLSearchParams(window.MH_ROUTE_QUERY != null ? window.MH_ROUTE_QUERY : location.search).get(name); } catch (e) { return null; }
+  }
 
   var toastTimer;
   function toast(text) {

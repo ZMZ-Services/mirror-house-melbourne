@@ -50,6 +50,12 @@ Workers Builds settings:
 
 - **Database.** `wrangler.jsonc` names the D1 database `mirror-house-db` without an ID, so the first deploy creates it automatically (Wrangler's automatic provisioning). Every deploy after that finds it by name and applies any new files in `migrations/`.
 
+## Single-file version
+
+`single-file/mirror-house-melbourne.html` is the whole site in one HTML file (home, product, checkout, room visualiser, dashboard) for editing with Claude or sharing as a file. It runs without the Worker: `single-file/local-api.js` stands in for the API and keeps orders, signups and stock in the browser. Photos load from the live site (`public/_headers` allows that).
+
+Rebuild it after changing the site: `node scripts/build-single-file.mjs`. Changes made inside the single file don't flow back to the site by themselves; copy them into `public/` and rebuild.
+
 ## Run locally
 
 ```sh
