@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mirror-house-melbourne",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+
+  // The site lives in ./public. The Worker only runs first for the API and the
+  // admin pages, so it can check the admin password. Everything else is served straight from assets.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/admin*"]
+  },
+
+  // database_id is filled in by scripts/ensure-d1.mjs on the first deploy.
+  // Locally, `wrangler dev` uses a local SQLite copy keyed by the binding name.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mirror-house-db",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

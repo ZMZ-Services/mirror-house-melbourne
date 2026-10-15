@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO Meta Tags -->
+  <title>Mirror House Melbourne | Artisan Homewares & Architectural Mirrors</title>
+  <meta name="description" content="Shop architectural floor mirrors, wavy statement wall mirrors and artisan homewares from Mirror House Melbourne. Brass frames, travertine stone and custom-crated fragile delivery.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="http://localhost:3000/">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="http://localhost:3000/">
+  <meta property="og:title" content="Mirror House Melbourne | Artisan Homewares & Architectural Mirrors">
+  <meta property="og:description" content="Statement architectural mirrors and artisan homewares from Mirror House Melbourne. Custom-crated fragile freight and white glove delivery options.">
+  <meta property="og:image" content="http://localhost:3000/images/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_AU">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Mirror House Melbourne | Artisan Homewares & Architectural Mirrors">
+  <meta name="twitter:description" content="Architectural mirrors and homewares from Melbourne, designed for light, scale and calm.">
+  <meta name="twitter:image" content="http://localhost:3000/images/og-image.jpg">
+
+  <!-- Schema.org JSON-LD (FAQ entries mirror the visible FAQ below, word for word) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "http://localhost:3000/#organization",
+        "name": "Mirror House Melbourne",
+        "url": "http://localhost:3000/",
+        "logo": "http://localhost:3000/images/og-image.jpg",
+        "sameAs": [
+          "https://instagram.com/mirrorhousemelbourne",
+          "https://pinterest.com/mirrorhousemelbourne"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "http://localhost:3000/#website",
+        "url": "http://localhost:3000/",
+        "name": "Mirror House Melbourne",
+        "publisher": { "@id": "http://localhost:3000/#organization" }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How are large floor mirrors delivered safely?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Every floor and wall mirror travels upright in a custom reinforced timber crate with foam corner guards and shock-absorbing blocks, carried by a dedicated fragile-freight courier. You'll get SMS tracking before dispatch."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the Transit & Breakage Cover option?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For a flat $12.50, selected at checkout, we send a priority replacement at no extra cost if your order arrives damaged. Just send us photos within 48 hours of delivery."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is hanging hardware included, and how should I hang my mirror?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Wall mirrors come with D-rings or a heavy-gauge French cleat. For anything over 10kg, fix into wall studs or masonry, never plasterboard alone. If you're unsure, a licensed handyman can hang it in under an hour."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I book White Glove delivery?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Choose White Glove at checkout and a two-person team will carry your mirror into the room of your choice, unpack it and take away all the crating."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which payment methods do you accept?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Checkout runs securely through Square. We accept Visa, Mastercard, American Express, Apple Pay and Google Pay, with no card surcharge."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="preload" as="image" href="/images/hero.jpg">
+
+  <!-- Page styles moved out of inline style="" attributes. Move into theme.css when convenient. -->
+  <style>
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+    .announcement-divider { opacity: 0.6; }
+
+    /* Hero with generated room image; light scrim on the left keeps the headline readable */
+    .hero-section {
+      background-color: #EFE8DF;
+      background-image:
+        linear-gradient(90deg, rgba(246, 241, 234, 0.96) 0%, rgba(246, 241, 234, 0.88) 38%, rgba(246, 241, 234, 0) 68%),
+        url("/images/hero.jpg");
+      background-size: cover;
+      background-position: center right;
+    }
+    .hero-section .hero-title { color: #191817; }
+    .hero-section .hero-desc { color: #4A4540; }
+    @media (max-width: 760px) {
+      .hero-section {
+        background-image:
+          linear-gradient(180deg, rgba(246, 241, 234, 0.94) 0%, rgba(246, 241, 234, 0.9) 60%, rgba(246, 241, 234, 0.55) 100%),
+          url("/images/hero.jpg");
+        background-position: 70% center;
+      }
+    }
+
+    .trust-icon svg { width: 28px; height: 28px; color: #8A6A2B; }
+
+    /* Curated banner */
+    .curated-tag { background: rgba(255, 255, 255, 0.1); color: #EADBC8; }
+    .curated-title { font-family: var(--font-serif); font-size: 2.6rem; margin: 16px 0; line-height: 1.15; }
+    .curated-copy { color: #D3CDC6; font-size: 0.95rem; margin-bottom: 28px; line-height: 1.6; }
+    .curated-img { width: 100%; height: auto; display: block; }
+
+    /* Guarantee */
+    #guarantee-section { padding-top: 20px; }
+    .guarantee-img {
+      width: 220px; max-width: 100%; height: auto; aspect-ratio: 4 / 3;
+      object-fit: cover; border-radius: 6px; flex-shrink: 0;
+    }
+    .guarantee-title { font-family: var(--font-serif); font-size: 1.7rem; color: #191817; margin-bottom: 6px; }
+    .guarantee-copy { color: #555; font-size: 0.92rem; line-height: 1.6; }
+    @media (max-width: 640px) {
+      .guarantee-box { flex-direction: column; align-items: flex-start; }
+      .guarantee-img { width: 100%; }
+    }
+
+    /* Reviews */
+    #reviews-section { background: #F4EFEA; border-top: 1px solid #E4DDD2; border-bottom: 1px solid #E4DDD2; }
+    .rating-summary { margin-top: 10px; font-size: 1rem; color: #191817; }
+    .rating-summary strong { color: #7A5C22; }
+    .review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 24px; }
+    .review-card { background: #fff; padding: 28px; border-radius: 8px; border: 1px solid #E5DFD4; }
+    .review-stars { color: #B08A3E; font-size: 1.1rem; margin-bottom: 8px; }
+    .review-title { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .review-body { font-size: 0.88rem; color: #555; line-height: 1.6; }
+    .review-author { margin-top: 16px; font-size: 0.78rem; font-weight: 700; color: #6B655E; }
+    .review-verified { color: #0E6838; }
+
+    /* FAQ */
+    .faq-container { max-width: 860px; }
+    .faq-list { display: flex; flex-direction: column; gap: 14px; }
+    .faq-item { background: #fff; border: 1px solid #E2DCD3; border-radius: 6px; padding: 18px 24px; }
+    .faq-item summary { font-weight: 600; cursor: pointer; color: #191817; font-size: 1.05rem; }
+    .faq-item p { margin-top: 12px; font-size: 0.9rem; color: #555; line-height: 1.6; }
+
+    /* Footer */
+    .footer-brand { font-size: 1.45rem; letter-spacing: 0.08em; }
+    .footer-about { color: #A39D95; font-size: 0.88rem; margin: 12px 0 20px; line-height: 1.6; }
+    .footer-contact { font-size: 0.82rem; color: #8F887F; }
+    .footer-contact a { color: inherit; }
+    .footer-note { color: #A39D95; font-size: 0.85rem; }
+    .newsletter-btn { padding: 10px 18px; font-size: 0.85rem; }
+    .newsletter-status { margin-top: 10px; font-size: 0.85rem; color: #EADBC8; min-height: 1.2em; }
+
+    .noscript-note { padding: 24px; text-align: center; color: #555; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Announcement Bar -->
+  <aside class="announcement-bar" aria-label="Store announcement">
+    <span id="announcement-text">Free fragile freight on orders over $150 · 30-day in-home trial</span>
+    <span class="announcement-divider" aria-hidden="true">|</span>
+    <span>Use code <strong>WELCOME10</strong> for 10% off your first order</span>
+  </aside>
+
+  <!-- Main Store Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand-logo">
+        <a href="/" class="brand-title">MIRROR HOUSE</a>
+        <span class="brand-subtitle">Melbourne • Architectural Mirrors & Homewares</span>
+      </div>
+
+      <nav class="site-nav" aria-label="Primary">
+        <ul class="nav-links">
+          <li><a href="#collection-section" class="nav-link active" aria-current="page">Shop All</a></li>
+          <li><a href="#curated-showcase" class="nav-link">Arch Mirrors</a></li>
+          <li><a href="#guarantee-section" class="nav-link">Delivery Promise</a></li>
+          <li><a href="#reviews-section" class="nav-link">Reviews</a></li>
+          <li><a href="#faq-section" class="nav-link">Hanging & FAQ</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a href="/admin.html" class="admin-link-pill" title="Shopify-Style Admin Portal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Shopify Admin
+        </a>
+
+        <!-- Cart Button with Live Counter -->
+        <button class="action-btn open-cart-btn" aria-label="View shopping bag" aria-controls="cart-drawer" title="Shopping Bag">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+          <span class="cart-count-badge" aria-live="polite">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+
+  <!-- Hero Banner -->
+  <section class="hero-section" aria-label="Featured">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-tag">Brass Frames & Natural Travertine</div>
+        <h1 class="hero-title">Sculptural Mirrors Made for Light, Scale & Calm.</h1>
+        <p class="hero-desc">
+          Bring warmth and light into your home with full-length floor mirrors, fluid wavy wall pieces and natural travertine stoneware.
+        </p>
+        <div class="hero-cta-group">
+          <a href="#collection-section" class="btn btn-primary">
+            Shop Statement Mirrors
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#guarantee-section" class="btn btn-secondary">How We Deliver</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust Bar -->
+  <section class="trust-bar" aria-labelledby="trust-heading">
+    <h2 id="trust-heading" class="visually-hidden">Why shop with Mirror House</h2>
+    <div class="container">
+      <div class="trust-grid">
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
+          </div>
+          <div class="trust-info">
+            <h4>Custom Timber Crating</h4>
+            <p>Foam-cushioned, built for fragile freight</p>
+          </div>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <div class="trust-info">
+            <h4>Breakage Cover</h4>
+            <p>Add $12.50 cover for a priority replacement</p>
+          </div>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
+          </div>
+          <div class="trust-info">
+            <h4>Secure Square Checkout</h4>
+            <p>Cards, Apple Pay & Google Pay, no surcharge</p>
+          </div>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
+          </div>
+          <div class="trust-info">
+            <h4>30-Day In-Home Trial</h4>
+            <p>Live with it first, return it easily</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Product Catalog Section -->
+  <section class="section" id="collection-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-subtitle">The Collection</span>
+        <h2 class="section-title">Architectural Mirrors & Artisan Living</h2>
+        <p class="section-desc">Every piece is individually inspected and packed by hand before it leaves our Melbourne studio.</p>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="category-filter-bar" id="category-pills"></div>
+
+      <!-- Dynamic Product Cards Grid -->
+      <div class="product-grid" id="products-grid" aria-live="polite"></div>
+      <noscript>
+        <p class="noscript-note">Please turn on JavaScript to browse the collection, or email <a href="mailto:concierge@mirrorhousemelbourne.com.au">concierge@mirrorhousemelbourne.com.au</a>.</p>
+      </noscript>
+    </div>
+  </section>
+
+  <!-- Curated Collection Spotlight Banner -->
+  <section class="collection-banner-section" id="curated-showcase">
+    <div class="container">
+      <div class="curated-banner">
+        <div class="curated-content">
+          <span class="hero-tag curated-tag">Signature Piece</span>
+          <h2 class="curated-title">The Grand Royale Arch. 195cm of Brass-Framed Light.</h2>
+          <p class="curated-copy">
+            5mm high-definition silvered glass in a slim brass frame, with heavy-duty anchor cleats fitted. Makes a small apartment feel twice the size, or anchors an open-plan loft.
+          </p>
+          <a href="/product.html?slug=grand-royale-arched-brass-floor-mirror" class="btn btn-primary">
+            View Details & Hanging Guide
+          </a>
+        </div>
+        <div>
+          <img src="/images/grand-royale-arch.jpg" width="1200" height="1500" loading="lazy" decoding="async"
+               alt="Tall arched brass-framed floor mirror leaning against a warm plaster wall beside a travertine plinth and ceramic vase" class="curated-img">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fragile Handling Promise -->
+  <section class="section" id="guarantee-section">
+    <div class="container">
+      <div class="guarantee-box">
+        <img src="/images/crating.jpg" width="1200" height="900" loading="lazy" decoding="async"
+             alt="Large mirror packed upright in a pine crate with foam corner guards and shock-absorbing blocks" class="guarantee-img">
+        <div>
+          <h2 class="guarantee-title">Our "Zero Cracked Glass" Delivery Promise</h2>
+          <p class="guarantee-copy">
+            Large mirrors need careful handling. Every Mirror House piece travels in a double-walled timber crate with high-density foam shock blocks. For extra peace of mind, add <strong>Transit & Breakage Cover</strong> at checkout for $12.50 and we'll send a priority replacement if anything arrives damaged.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Customer Reviews Section -->
+  <section class="section" id="reviews-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-subtitle">Real Homes & Stylists</span>
+        <h2 class="section-title">Loved by Architects & Stylists</h2>
+        <div class="rating-summary">
+          <strong><span aria-hidden="true">★★★★★</span> 4.96 / 5.00</strong> average rating across 420+ verified deliveries
+        </div>
+      </div>
+
+      <div class="review-grid">
+        <article class="review-card">
+          <div class="review-stars" role="img" aria-label="Rated 5 out of 5">★★★★★</div>
+          <h3 class="review-title">"Museum-quality craftsmanship"</h3>
+          <p class="review-body">
+            The Grand Royale arch mirror is extraordinary. The brass has a real, weighty depth that cheap aluminium coatings simply can't mimic. The courier carried it right into our lounge.
+          </p>
+          <p class="review-author">
+            Evelyn Sterling, Interior Designer, Melbourne <span class="review-verified">✓ Verified Buyer</span>
+          </p>
+        </article>
+
+        <article class="review-card">
+          <div class="review-stars" role="img" aria-label="Rated 5 out of 5">★★★★★</div>
+          <h3 class="review-title">"The wavy curves make everyone stop and stare"</h3>
+          <p class="review-body">
+            The Ondine mirror arrived in a solid timber crate without a scratch. It looks like a $1,200 gallery piece. The French cleat went straight onto a stud and it hasn't moved.
+          </p>
+          <p class="review-author">
+            Clara Delacroix, Sydney NSW <span class="review-verified">✓ Verified Buyer</span>
+          </p>
+        </article>
+
+        <article class="review-card">
+          <div class="review-stars" role="img" aria-label="Rated 5 out of 5">★★★★★</div>
+          <h3 class="review-title">"Hefty, genuine travertine"</h3>
+          <p class="review-body">
+            Real stone with natural pitted texture, not resin. The dimmer lets us set a warm amber glow at night, and it pairs beautifully with our travertine catch-all tray.
+          </p>
+          <p class="review-author">
+            Harrison T., Brisbane QLD <span class="review-verified">✓ Verified Buyer</span>
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section (matches the FAQPage JSON-LD in <head>) -->
+  <section class="section" id="faq-section">
+    <div class="container faq-container">
+      <div class="section-header">
+        <span class="section-subtitle">Common Questions</span>
+        <h2 class="section-title">Hanging, Delivery & FAQ</h2>
+      </div>
+
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>How are large floor mirrors delivered safely?</summary>
+          <p>Every floor and wall mirror travels upright in a custom reinforced timber crate with foam corner guards and shock-absorbing blocks, carried by a dedicated fragile-freight courier. You'll get SMS tracking before dispatch.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>What is the Transit & Breakage Cover option?</summary>
+          <p>For a flat $12.50, selected at checkout, we send a priority replacement at no extra cost if your order arrives damaged. Just send us photos within 48 hours of delivery.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Is hanging hardware included, and how should I hang my mirror?</summary>
+          <p>Yes. Wall mirrors come with D-rings or a heavy-gauge French cleat. For anything over 10kg, fix into wall studs or masonry, never plasterboard alone. If you're unsure, a licensed handyman can hang it in under an hour.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Can I book White Glove delivery?</summary>
+          <p>Yes. Choose White Glove at checkout and a two-person team will carry your mirror into the room of your choice, unpack it and take away all the crating.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Which payment methods do you accept?</summary>
+          <p>Checkout runs securely through Square. We accept Visa, Mastercard, American Express, Apple Pay and Google Pay, with no card surcharge.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- Slide-Over Shopping Bag Drawer -->
+  <div class="cart-drawer-overlay" id="cart-overlay"></div>
+  <aside class="cart-drawer" id="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title">
+    <div class="drawer-header">
+      <h2 class="drawer-title" id="cart-drawer-title">Shopping Bag</h2>
+      <button class="drawer-close" id="close-cart-btn" aria-label="Close shopping bag"><span aria-hidden="true">✕</span></button>
+    </div>
+
+    <!-- Free Shipping Progress Goal -->
+    <div class="free-shipping-goal">
+      <div class="shipping-bar-text" id="shipping-progress-text" aria-live="polite">Add $150 for free fragile freight</div>
+      <div class="shipping-progress-track">
+        <div class="shipping-progress-fill" id="shipping-progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- Items List -->
+    <div class="drawer-items" id="drawer-items-list"></div>
+
+    <!-- Drawer Footer / Checkout CTA -->
+    <div class="drawer-footer">
+      <div class="drawer-subtotal-line">
+        <span class="drawer-subtotal-label">Subtotal</span>
+        <span class="drawer-subtotal-val" id="drawer-subtotal">$0.00</span>
+      </div>
+      <p class="drawer-tax-note">Shipping and optional breakage cover are calculated at checkout.</p>
+      <a href="/checkout.html" class="btn btn-primary drawer-checkout-btn" id="drawer-checkout-btn">
+        Checkout Securely
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Quick View Modal -->
+  <div class="modal-overlay" id="quickview-overlay">
+    <div class="quickview-card" role="dialog" aria-modal="true" aria-label="Product quick view">
+      <button class="modal-close-btn" id="close-quickview-btn" aria-label="Close quick view"><span aria-hidden="true">✕</span></button>
+      <div id="quickview-content" style="display: contents;"></div>
+    </div>
+  </div>
+
+  <!-- Store Footer -->
+  <footer class="site-footer">
+    <h2 class="visually-hidden">Store information</h2>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h3 class="footer-brand">MIRROR HOUSE MELBOURNE</h3>
+          <p class="footer-about">
+            Statement architectural mirrors and artisan homewares from Melbourne, bringing light, scale and calm into Australian homes.
+          </p>
+          <p class="footer-contact">
+            Studio & Warehouse: Melbourne, Victoria, Australia<br>
+            Email: <a href="mailto:concierge@mirrorhousemelbourne.com.au">concierge@mirrorhousemelbourne.com.au</a>
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h3>Collections</h3>
+          <ul>
+            <li><a href="/?category=Floor+Mirrors">Architectural Floor Mirrors</a></li>
+            <li><a href="/?category=Wall+Mirrors">Organic & Wavy Wall Mirrors</a></li>
+            <li><a href="/?category=Lighting">Travertine Lighting</a></li>
+            <li><a href="/?category=Ceramics+%26+Vases">Hand-Thrown Ceramic Vases</a></li>
+            <li><a href="/?category=Tableware">Ribbed Amber Glassware</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Customer Care</h3>
+          <ul>
+            <li><a href="/checkout.html">Checkout & Postage</a></li>
+            <li><a href="#guarantee-section">Delivery Promise</a></li>
+            <li><a href="#faq-section">Mirror Hanging Guide</a></li>
+            <li><a href="/admin.html">Merchant Admin Portal</a></li>
+            <li><a href="/admin-dashboard.html">Business Dashboard</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Join Our List</h3>
+          <p class="footer-note">
+            Get 10% off your first order and early access to new mirrors.
+          </p>
+          <form class="newsletter-box" id="newsletter-form" novalidate>
+            <label for="newsletter-email" class="visually-hidden">Email address</label>
+            <input type="email" id="newsletter-email" name="email" placeholder="Enter your email" autocomplete="email" required class="newsletter-input">
+            <button type="submit" class="btn btn-primary newsletter-btn">Join</button>
+          </form>
+          <p class="newsletter-status" id="newsletter-status" role="status"></p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 Mirror House Melbourne. All rights reserved.</div>
+        <ul class="payment-badges" aria-label="Accepted payment methods">
+          <li class="payment-badge-pill">Square</li>
+          <li class="payment-badge-pill">Apple Pay</li>
+          <li class="payment-badge-pill">Google Pay</li>
+          <li class="payment-badge-pill">Visa</li>
+          <li class="payment-badge-pill">Mastercard</li>
+          <li class="payment-badge-pill">AMEX</li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/js/store.js"></script>
+  <script>
+    // Newsletter: saves the address to D1 through the Worker (/api/newsletter).
+    (function () {
+      var form = document.getElementById('newsletter-form');
+      var input = document.getElementById('newsletter-email');
+      var status = document.getElementById('newsletter-status');
+      if (!form) return;
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!input.checkValidity()) {
+          status.textContent = 'Please enter a valid email address.';
+          input.focus();
+          return;
+        }
+        status.textContent = 'Joining…';
+        fetch('/api/newsletter', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: input.value })
+        })
+          .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+          .then(function (r) {
+            if (!r.ok) throw new Error(r.data.error || 'Could not sign you up.');
+            status.textContent = "You're on the list. Use code WELCOME10 for 10% off.";
+            form.reset();
+          })
+          .catch(function (err) {
+            status.textContent = err.message || 'Could not sign you up. Please try again.';
+          });
+      });
+    })();
+  </script>
+</body>
+</html>
