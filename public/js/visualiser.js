@@ -1164,11 +1164,11 @@ const toImage = (x, y) => [(x - view.ox) / (state.photo.w * view.s), (y - view.o
 
 function fitView() {
   const { w, h } = editorSize;
-  const pad = 30;
-  const s0 = Math.min((w - pad * 2) / state.photo.w, (h - pad * 2) / state.photo.h);
+  const pad = 28, top = 72;   // room for the tool buttons above the photo
+  const s0 = Math.min((w - pad * 2) / state.photo.w, (h - top - pad) / state.photo.h);
   view.s0 = view.s = s0;
   view.ox = (w - state.photo.w * s0) / 2;
-  view.oy = (h - state.photo.h * s0) / 2;
+  view.oy = top + (h - top - pad - state.photo.h * s0) / 2;
 }
 
 function layoutEditor() {
@@ -1184,7 +1184,7 @@ function clampView() {
   const { w, h } = editorSize;
   const iw = state.photo.w * view.s, ih = state.photo.h * view.s;
   view.ox = iw <= w ? (w - iw) / 2 : clamp(view.ox, w - iw - 40, 40);
-  view.oy = ih <= h ? (h - ih) / 2 : clamp(view.oy, h - ih - 40, 40);
+  view.oy = ih <= h - 100 ? 72 + (h - 100 - ih) / 2 : clamp(view.oy, h - ih - 40, 72);
 }
 function zoomAt(mx, my, k) {
   const ns = clamp(view.s * k, view.s0, view.s0 * 5);
@@ -1220,10 +1220,11 @@ function drawEditor() {
   P.forEach((p, i) => { svg += `<line class="post-line" x1="${fl[i][0]}" y1="${fl[i][1]}" x2="${cl[i][0]}" y2="${cl[i][1]}"/>`; });
   svg += `<polyline class="ceil-line" points="${pts(cl)}"/><polyline class="floor-line" points="${pts(fl)}"/>`;
   for (let j = 0; j < P.length - 1; j++) {
-    const mx = (fl[j][0] + fl[j + 1][0] + cl[j][0] + cl[j + 1][0]) / 4, my = (fl[j][1] + fl[j + 1][1] + cl[j][1] + cl[j + 1][1]) / 4;
+    const mx = (fl[j][0] + fl[j + 1][0] + cl[j][0] + cl[j + 1][0]) / 4;
+    const my = 0.7 * (cl[j][1] + cl[j + 1][1]) / 2 + 0.3 * (fl[j][1] + fl[j + 1][1]) / 2;
     svg += `<circle class="wall-num" cx="${mx}" cy="${my}" r="13"/><text class="wall-num-text" x="${mx}" y="${my}">${j + 1}</text>`;
   }
-  if (state.horizon != null) {
+  if (eyeShown()) {
     const y = toScreen(0, state.horizon)[1];
     svg += `<line class="eye-line" x1="${view.ox}" y1="${y}" x2="${view.ox + state.photo.w * view.s}" y2="${y}"/>`;
   }
@@ -1231,7 +1232,7 @@ function drawEditor() {
   el.svg.innerHTML = svg;
 
   // Dots
-  const want = P.length * 2 + (state.horizon != null ? 1 : 0);
+  const want = P.length * 2 + (eyeShown() ? 1 : 0);
   if (el.dotLayer.children.length !== want) renderDots();
   const nud = state.layout ? state.layout.nudges : [];
   P.forEach((p, i) => {
@@ -1269,6 +1270,9 @@ function drawEditor() {
   el.removeCorner.disabled = !P.some((p) => !p.edge) || P.length <= 2;
 }
 
+// The eye-level line is a fine-tuning tool: only on show while "More settings" is open.
+const eyeShown = () => state.horizon != null && $('#more-settings').open;
+
 function postName(i) {
   const p = state.posts[i];
   if (p.edge === 'l') return 'Left edge';
@@ -1282,7 +1286,7 @@ function renderDots() {
     html += `<button type="button" class="dot" data-post="${i}" data-end="floor" aria-label="${postName(i)}, floor dot. Arrow keys move it."></button>`;
     html += `<button type="button" class="dot ceil" data-post="${i}" data-end="ceil" aria-label="${postName(i)}, top dot. Arrow keys move it."></button>`;
   });
-  if (state.horizon != null) html += '<button type="button" class="dot eye-dot" data-end="eye" aria-label="Eye level line. Up and down arrows move it."><span>Eye level</span></button>';
+  if (eyeShown()) html += '<button type="button" class="dot eye-dot" data-end="eye" aria-label="Eye level line. Up and down arrows move it."><span>Eye level</span></button>';
   el.dotLayer.innerHTML = html;
 }
 
@@ -1354,6 +1358,7 @@ function localPoint(e) {
 
 function initEditor() {
   el.editor.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.editor-tools')) return;   // buttons handle their own clicks
     const dot = e.target.closest('.dot');
     const [x, y] = localPoint(e);
     if (dot) {
@@ -1515,6 +1520,7 @@ function initSettings() {
     settingsChanged(true);
   });
   el.horizonInput.addEventListener('input', () => { state.horizon = 1 - +el.horizonInput.value / 100; settingsChanged(); });
+  $('#more-settings').addEventListener('toggle', () => { if (state.step === 2) { renderDots(); drawEditor(); } });
 }
 
 // ---------------------------------------------------------------------------
