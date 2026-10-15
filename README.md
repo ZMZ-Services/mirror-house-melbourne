@@ -27,13 +27,11 @@ The admin pages (`/admin*`) and `/api/admin/*` use browser login: user `admin`, 
 
 ## First deploy (one-off setup, about 5 minutes)
 
-1. **Cloudflare API token.** In Cloudflare go to My Profile → API Tokens → Create Token → use the **Edit Cloudflare Workers** template, then add the permission **Account → D1 → Edit**. Create it and copy the token.
-2. **Account ID.** Shown on the Cloudflare dashboard home page, in the right-hand column of Workers & Pages.
-3. **GitHub secrets.** In this repo go to Settings → Secrets and variables → Actions → New repository secret. Add:
+1. **Cloudflare API token.** In the ZMZ Services Cloudflare account (the account ID is pinned in `wrangler.jsonc`), go to My Profile → API Tokens → Create Token → use the **Edit Cloudflare Workers** template, then add the permission **Account → D1 → Edit**. Create it and copy the token.
+2. **GitHub secrets.** In this repo go to Settings → Secrets and variables → Actions → New repository secret. Add:
    - `CLOUDFLARE_API_TOKEN`
-   - `CLOUDFLARE_ACCOUNT_ID`
    - `ADMIN_PASSWORD` (pick one for the admin pages)
-4. **Deploy.** Merge to `main`, or open Actions → *Deploy to Cloudflare* → Run workflow. The first run creates the `mirror-house-db` database in Oceania, sets up the tables, seeds the demo products and publishes the site at `https://mirror-house-melbourne.<your-subdomain>.workers.dev`.
+3. **Deploy.** Merge to `main`, or open Actions → *Deploy to Cloudflare* → Run workflow. The first run creates the `mirror-house-db` database in Oceania, sets up the tables, seeds the demo products and publishes the site at `https://mirror-house-melbourne.zarko-ddc.workers.dev`.
 
 Every later push to `main` redeploys and applies any new files in `migrations/`.
 

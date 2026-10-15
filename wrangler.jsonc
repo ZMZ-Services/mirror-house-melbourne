@@ -1,6 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mirror-house-melbourne",
+  // ZMZ Services Cloudflare account (zarko-ddc.workers.dev). Not a secret.
+  "account_id": "ddc4b57d62fbeeb269f883673e5903c4",
   "main": "src/worker.js",
   "compatibility_date": "2026-10-01",
   "observability": { "enabled": true },
