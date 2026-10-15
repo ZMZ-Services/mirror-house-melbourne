@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mirror House Back of House</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Back-of-house business dashboard for Mirror House Melbourne (demo data).">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: an espresso header band, then a 12-column ledger of cards that summarises first
+   (KPIs, attention, health) and drills into detail below. Brass is the only accent. */
+:root {
+  --bg: #F3EEE6;          /* sand page */
+  --surface: #FBF8F2;     /* cream card */
+  --surface-2: #F1EBE1;   /* inset well */
+  --ink: #2A221B;         /* espresso */
+  --ink-2: #5A4E43;
+  --muted: #74675A;
+  --line: #E3D9CA;
+  --line-strong: #CBBDA9;
+  --brass: #B08A3E;
+  --brass-ink: #82621F;
+  --band: #2A221B;
+  --band-ink: #F3EDE3;
+  --band-muted: #BCAE9B;
+  --band-line: #4A3E33;
+  --focus: #B08A3E;
+  --tooltip-bg: #2A221B;
+  --tooltip-ink: #F6F1E8;
+  /* chart series (validated: light surface, all-pairs, CVD-safe) */
+  --s1: #a67a12;
+  --s2: #3a6db5;
+  --s3: #d0607e;
+  --s1-wash: rgba(166, 122, 18, 0.11);
+  --spark: #9C8D7B;
+  /* status */
+  --good: #1F6B33;  --good-bg: #E3EEDF;
+  --warn: #8A5600;  --warn-bg: #F8EBCF;
+  --bad: #A3302B;   --bad-bg: #F6DEDA;
+  --info: #4A5A6E;  --info-bg: #E6E9EC;
+  --font-display: "Cormorant Garamond", "Cormorant", Garamond, "Times New Roman", serif;
+  --font-sans: "Instrument Sans", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14110E; --surface: #1E1A16; --surface-2: #26211C;
+    --ink: #F2EBE0; --ink-2: #CDBFAD; --muted: #A69887;
+    --line: #342D26; --line-strong: #4C4238;
+    --brass: #C9A55E; --brass-ink: #D6B571;
+    --band: #0D0B09; --band-ink: #F2EBE0; --band-muted: #A69887; --band-line: #3A3129;
+    --focus: #D6B571; --tooltip-bg: #F2EBE0; --tooltip-ink: #1E1A16;
+    --s1: #b8892a; --s2: #4f86d0; --s3: #d8627f; --s1-wash: rgba(184, 137, 42, 0.10);
+    --spark: #8C7F70;
+    --good: #82CF8E; --good-bg: #1B2C1E;
+    --warn: #EDC067; --warn-bg: #33291A;
+    --bad: #F2948A;  --bad-bg: #3A211E;
+    --info: #A9B8CB; --info-bg: #242A31;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14110E; --surface: #1E1A16; --surface-2: #26211C;
+  --ink: #F2EBE0; --ink-2: #CDBFAD; --muted: #A69887;
+  --line: #342D26; --line-strong: #4C4238;
+  --brass: #C9A55E; --brass-ink: #D6B571;
+  --band: #0D0B09; --band-ink: #F2EBE0; --band-muted: #A69887; --band-line: #3A3129;
+  --focus: #D6B571; --tooltip-bg: #F2EBE0; --tooltip-ink: #1E1A16;
+  --s1: #b8892a; --s2: #4f86d0; --s3: #d8627f; --s1-wash: rgba(184, 137, 42, 0.10);
+  --spark: #8C7F70;
+  --good: #82CF8E; --good-bg: #1B2C1E;
+  --warn: #EDC067; --warn-bg: #33291A;
+  --bad: #F2948A;  --bad-bg: #3A211E;
+  --info: #A9B8CB; --info-bg: #242A31;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.inner { max-width: 1380px; margin: 0 auto; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- header band ---------- */
+.band { background: var(--band); color: var(--band-ink); border-bottom: 1px solid var(--brass); }
+.band .inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; padding-block: 18px; }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.brand svg { flex: none; }
+.brand-name { font-family: var(--font-display); font-weight: 500; font-size: 30px; line-height: 1; letter-spacing: 0.005em; margin: 0; }
+.brand-name span { color: var(--brass); padding: 0 0.18em; }
+.brand-sub { display: block; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--band-muted); margin-top: 6px; }
+.band-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.band a.navlink {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 13px; font-weight: 500;
+  color: var(--band-ink); padding: 8px 12px; border: 1px solid var(--band-line); border-radius: 999px;
+}
+.band a.navlink:hover { border-color: var(--brass); }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 999px;
+  border: 1px solid var(--band-line); background: transparent; color: var(--band-ink); cursor: pointer;
+}
+.icon-btn:hover { border-color: var(--brass); }
+.icon-btn svg { width: 18px; height: 18px; }
+
+/* ---------- toolbar ---------- */
+.toolbar .inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; padding-block: 22px 6px; }
+.toolbar h1 { font-family: var(--font-display); font-weight: 500; font-size: clamp(26px, 3.2vw, 36px); line-height: 1.1; margin: 0; text-wrap: balance; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--muted); font-size: 13px; margin-top: 6px; }
+.demo-pill {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--brass-ink); border: 1px solid var(--brass); border-radius: 999px; padding: 3px 10px;
+}
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.seg button {
+  font: inherit; font-size: 13px; font-weight: 500; border: 0; background: transparent; color: var(--ink-2);
+  padding: 7px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+}
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--brass) inset; }
+
+/* ---------- grid & cards ---------- */
+main .inner { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; padding-block: 16px 40px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-7 { grid-column: span 7; }
+.span-6 { grid-column: span 6; } .span-5 { grid-column: span 5; } .span-4 { grid-column: span 4; }
+.card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.card-head h2 { font-family: var(--font-display); font-weight: 600; font-size: 23px; line-height: 1.15; margin: 0; letter-spacing: 0.005em; text-wrap: balance; }
+.card-head p, .sub { margin: 0; color: var(--muted); font-size: 13px; }
+.section-label { grid-column: span 12; display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+.section-label h2 { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 20px; color: var(--ink-2); margin: 0; white-space: nowrap; }
+.section-label::after { content: ""; flex: 1; height: 1px; background: var(--line-strong); }
+
+/* ---------- KPI tiles ---------- */
+.kpis { grid-column: span 12; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px 12px; min-width: 0; display: grid; grid-template-rows: auto auto auto 1fr; gap: 4px; }
+.kpi-label { font-size: 13px; color: var(--ink-2); font-weight: 500; display: flex; justify-content: space-between; gap: 8px; }
+.kpi-label small { color: var(--muted); font-weight: 400; font-size: 12px; }
+.kpi-value { font-size: 30px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
+.kpi-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12.5px; color: var(--muted); }
+.delta { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.delta.good { color: var(--good); } .delta.bad { color: var(--bad); } .delta.flat { color: var(--muted); }
+.spark { width: 100%; height: 40px; display: block; margin-top: 6px; align-self: end; }
+
+/* ---------- status pills / severity ---------- */
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 9px 3px 7px; border-radius: 999px; white-space: nowrap; line-height: 1.3; }
+.pill svg { width: 12px; height: 12px; flex: none; }
+.pill.good { color: var(--good); background: var(--good-bg); }
+.pill.warn { color: var(--warn); background: var(--warn-bg); }
+.pill.bad { color: var(--bad); background: var(--bad-bg); }
+.pill.info { color: var(--info); background: var(--info-bg); }
+
+.attention { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.attention li { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 4px 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.attention li:first-child { border-top: 0; padding-top: 2px; }
+.attention .what { font-weight: 600; color: var(--ink); }
+.attention .do { color: var(--ink-2); font-size: 13.5px; }
+.attention .do b { font-weight: 600; color: var(--ink); }
+.attention .where { color: var(--muted); font-size: 12px; }
+
+.checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.checklist li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.checklist li:first-child { border-top: 0; padding-top: 2px; }
+.checklist .rule { color: var(--ink); font-weight: 500; }
+.checklist .rule small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+.checklist .val { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.score { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ---------- charts ---------- */
+.chart-box { position: relative; width: 100%; min-width: 0; }
+.chart-box canvas { display: block; }
+.h-260 { height: 260px; } .h-300 { height: 340px; } .h-220 { height: 220px; } .h-200 { height: 200px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--ink-2); margin: 0; padding: 0; list-style: none; }
+.legend li { display: inline-flex; align-items: center; gap: 7px; }
+.key { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.key.area { height: 10px; width: 10px; border-radius: 2px; }
+.key.dash { background: repeating-linear-gradient(90deg, var(--ink-2) 0 4px, transparent 4px 7px) !important; height: 2px; }
+.chart-summary { margin: 0; color: var(--ink-2); font-size: 13px; }
+.chart-fallback { display: none; color: var(--muted); font-size: 13px; padding: 12px; border: 1px dashed var(--line-strong); border-radius: var(--radius); }
+.no-chart .chart-box { display: none; }
+.no-chart .chart-fallback { display: block; }
+details.data summary { cursor: pointer; color: var(--ink-2); font-size: 12.5px; font-weight: 500; width: max-content; max-width: 100%; }
+details.data summary:hover { color: var(--ink); }
+details.data[open] summary { margin-bottom: 8px; }
+
+/* ---------- goal ---------- */
+.goal-figure { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.goal-figure strong { font-size: 32px; font-weight: 600; letter-spacing: -0.01em; }
+.goal-figure span { color: var(--muted); }
+.meter { position: relative; height: 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; overflow: visible; }
+.meter > i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--s1); }
+.meter > b { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--ink); border-radius: 1px; }
+.meter-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.stat-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; margin: 0; }
+.stat-list div { min-width: 0; }
+.stat-list dt { color: var(--muted); font-size: 12.5px; }
+.stat-list dd { margin: 2px 0 0; font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat-list dd small { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+
+#live[hidden] { display: none; }
+.live-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.live-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.live-h { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.live-list { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
+.live-list li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.live-list li span:last-child { color: var(--muted); white-space: nowrap; }
+@media (max-width: 760px) { .live-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .live-cols { grid-template-columns: 1fr; } }
+
+/* ---------- tables ---------- */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; border: 1px solid var(--line); border-radius: var(--radius); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 9px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-weight: 600; color: var(--muted); font-size: 11.5px; letter-spacing: 0.04em; text-transform: uppercase; background: var(--surface-2); position: sticky; top: 0; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+td.name { font-weight: 500; color: var(--ink); white-space: normal; max-width: 260px; }
+#unitTable td.name, #invTable td.name, #chanTable td.name { min-width: 170px; }
+td.name small { display: block; color: var(--muted); font-weight: 400; font-size: 11.5px; }
+td.flag { color: var(--bad); font-weight: 600; }
+td.st { text-align: left; }
+tfoot td { font-weight: 600; background: var(--surface-2); border-bottom: 0; }
+
+/* ---------- funnel ---------- */
+.funnel { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.funnel li { display: grid; grid-template-columns: 132px minmax(0, 1fr) 70px; align-items: center; gap: 12px; }
+.funnel .stage { font-size: 13px; color: var(--ink); font-weight: 500; }
+.funnel .bar { height: 26px; background: var(--surface-2); border-radius: 4px; position: relative; }
+.funnel .bar i { position: absolute; inset: 0 auto 0 0; background: var(--s1); border-radius: 4px; min-width: 3px; }
+.funnel .count { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.funnel .drop { grid-column: 2 / 4; font-size: 12px; color: var(--muted); padding: 0 0 4px 2px; display: flex; gap: 10px; }
+.funnel .drop b { color: var(--ink-2); font-weight: 600; }
+
+/* ---------- fulfilment metrics ---------- */
+.metric-rows { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.metric-rows li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; }
+.metric-rows .m-label { font-weight: 500; }
+.metric-rows .m-label small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+.metric-rows .m-val { font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.metric-rows .m-bar { grid-column: 1 / 3; height: 6px; background: var(--surface-2); border-radius: 999px; position: relative; }
+.metric-rows .m-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--s1); }
+.metric-rows .m-bar b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.metric-rows .m-note { grid-column: 1 / 3; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
+.foot { color: var(--muted); font-size: 12.5px; }
+.foot .inner { padding-block: 0 40px; display: grid; gap: 8px; max-width: 1380px; }
+.foot p { margin: 0; max-width: 110ch; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1180px) {
+  .span-8, .span-7, .span-6, .span-5, .span-4 { grid-column: span 12; }
+  .pair { grid-column: span 6 !important; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .pair { grid-column: span 12 !important; }
+  main .inner { gap: 12px; }
+  .card { padding: 16px; }
+}
+@media (max-width: 560px) {
+  .kpis { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .brand-name { font-size: 26px; }
+  .band a.navlink { padding: 7px 10px; font-size: 12.5px; }
+  .attention li { grid-template-columns: minmax(0, 1fr); }
+  .funnel li { grid-template-columns: 104px minmax(0, 1fr) 56px; gap: 8px; }
+  .stat-list { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .seg button { padding: 7px 11px; }
+  .toolbar .inner { padding-block: 18px 4px; }
+  .meta [aria-hidden="true"] { display: none; }
+  #unitTable td.name, #invTable td.name, #chanTable td.name { min-width: 150px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="band gutter">
+  <div class="inner">
+    <div class="brand">
+      <svg width="30" height="40" viewBox="0 0 30 40" aria-hidden="true"><path d="M2 39V15a13 13 0 0 1 26 0v24Z" fill="none" stroke="var(--brass)" stroke-width="1.6"/><path d="M7 39V16a8 8 0 0 1 16 0v23" fill="none" stroke="var(--band-muted)" stroke-width="1" opacity=".6"/></svg>
+      <div>
+        <p class="brand-name">Mirror House<span>·</span>Back of House</p>
+        <span class="brand-sub">Melbourne · Owner's dashboard</span>
+      </div>
+    </div>
+    <nav class="band-actions" aria-label="Site">
+      <a class="navlink" href="/">Storefront
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 9 9 3M4 3h5v5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></a>
+      <a class="navlink" href="/admin.html">Products &amp; Orders</a>
+      <button class="icon-btn" id="themeToggle" type="button" aria-label="Switch to dark theme">
+        <svg id="themeIcon" viewBox="0 0 24 24" aria-hidden="true"></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<section class="toolbar gutter" aria-label="Period">
+  <div class="inner">
+    <div>
+      <h1 id="pageTitle">How the business is tracking</h1>
+      <div class="meta">
+        <span class="demo-pill" title="All figures on this page are generated demo data">Demo data</span>
+        <span id="asOf">Data to Wed 14 Oct 2026</span>
+        <span aria-hidden="true">·</span>
+        <span>AUD, ex GST</span>
+        <span aria-hidden="true">·</span>
+        <span id="compareNote">Compared with the previous 30 days</span>
+      </div>
+    </div>
+    <div class="seg" role="group" aria-label="Reporting period">
+      <button type="button" data-period="30" aria-pressed="true" id="p30">Last 30 days</button>
+      <button type="button" data-period="90" aria-pressed="false" id="p90">90 days</button>
+      <button type="button" data-period="365" aria-pressed="false" id="p365">12 months</button>
+    </div>
+  </div>
+</section>
+
+<main class="gutter">
+  <div class="inner">
+    <section class="kpis" id="kpis" aria-label="Key figures"></section>
+
+    <!-- Live figures from the D1 database (via /api/admin/summary). Hidden until the API answers. -->
+    <section class="card span-12" id="live" aria-labelledby="h-live" hidden>
+      <div class="card-head"><h2 id="h-live">Live from the store database</h2><p>Last 30 days · real orders and signups, not the demo model</p></div>
+      <dl class="stat-list live-stats" id="liveStats"></dl>
+      <div class="live-cols">
+        <div><h3 class="live-h">Low stock</h3><ul class="live-list" id="liveLow"></ul></div>
+        <div><h3 class="live-h">Recent orders</h3><ul class="live-list" id="liveRecent"></ul></div>
+      </div>
+    </section>
+
+    <section class="card span-7" aria-labelledby="h-attn">
+      <div class="card-head"><h2 id="h-attn">What needs attention</h2><p id="attnCount"></p></div>
+      <ul class="attention" id="attention"></ul>
+      <details class="data" id="attnMoreWrap"><summary id="attnMoreLabel"></summary><ul class="attention" id="attentionMore"></ul></details>
+    </section>
+
+    <section class="card span-5" aria-labelledby="h-health">
+      <div class="card-head"><h2 id="h-health">Business health checklist</h2><div class="score" id="healthScore"></div></div>
+      <ul class="checklist" id="health"></ul>
+    </section>
+
+    <div class="section-label"><h2>Sales &amp; customers</h2></div>
+
+    <section class="card span-8" aria-labelledby="h-trend" data-chart="trend">
+      <div class="card-head"><h2 id="h-trend">Revenue against plan</h2><p id="trendSub"></p></div>
+      <ul class="legend"><li><span class="key area" style="background:var(--s1)"></span>Net revenue</li><li><span class="key dash"></span>Plan (FY27 budget)</li></ul>
+      <div class="chart-box h-300"><canvas id="trendChart" role="img"></canvas></div>
+      <p class="chart-fallback">Chart library could not load. The figures are in the data table below.</p>
+      <p class="chart-summary" id="trendSummary"></p>
+      <details class="data"><summary>Show data table</summary><div class="table-scroll" id="trendTable"></div></details>
+    </section>
+
+    <section class="card span-4" aria-labelledby="h-goal">
+      <div class="card-head"><h2 id="h-goal">October goal</h2><p>Month to date</p></div>
+      <div class="goal-figure"><strong class="num" id="goalMtd"></strong><span id="goalOf"></span></div>
+      <div>
+        <div class="meter" role="meter" id="goalMeter" aria-valuemin="0" aria-valuemax="100"><i id="goalFill"></i><b id="goalPace"></b></div>
+        <div class="meter-scale"><span>1 Oct</span><span id="goalPaceLabel"></span><span>31 Oct</span></div>
+      </div>
+      <dl class="stat-list" id="goalStats"></dl>
+      <p class="sub" id="goalNote"></p>
+      <div class="table-scroll" id="fyTable"></div>
+    </section>
+
+    <section class="card span-5" aria-labelledby="h-cat" data-chart="cat">
+      <div class="card-head"><h2 id="h-cat">Sales by category</h2><p id="catSub"></p></div>
+      <div class="chart-box h-260"><canvas id="catChart" role="img"></canvas></div>
+      <p class="chart-fallback">Chart library could not load. The figures are in the data table below.</p>
+      <p class="chart-summary" id="catSummary"></p>
+      <details class="data"><summary>Show data table</summary><div class="table-scroll" id="catTable"></div></details>
+    </section>
+
+    <section class="card span-7" aria-labelledby="h-chan" data-chart="chan">
+      <div class="card-head"><h2 id="h-chan">Channel mix</h2><p>Revenue, spend and return by acquisition channel</p></div>
+      <div class="chart-box h-220"><canvas id="chanChart" role="img"></canvas></div>
+      <p class="chart-fallback">Chart library could not load. The figures are in the table below.</p>
+      <div class="table-scroll" id="chanTable"></div>
+      <p class="chart-summary" id="chanSummary"></p>
+    </section>
+
+    <section class="card span-5" aria-labelledby="h-funnel">
+      <div class="card-head"><h2 id="h-funnel">Conversion funnel</h2><p id="funnelSub"></p></div>
+      <ol class="funnel" id="funnel"></ol>
+      <p class="chart-summary" id="funnelSummary"></p>
+    </section>
+
+    <section class="card span-7" aria-labelledby="h-cust" data-chart="ltv">
+      <div class="card-head"><h2 id="h-cust">Customers</h2><p id="custSub"></p></div>
+      <dl class="stat-list" id="custStats" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));"></dl>
+      <div>
+        <p class="sub" style="color:var(--ink);font-weight:600;margin-bottom:4px">LTV : CAC by channel</p>
+        <ul class="legend"><li><span class="key area" style="background:var(--s1)"></span>LTV : CAC ratio</li><li><span class="key" style="background:var(--ink)"></span>3 : 1 target</li></ul>
+      </div>
+      <div class="chart-box h-220"><canvas id="ltvChart" role="img"></canvas></div>
+      <p class="chart-fallback">Chart library could not load. The channel ratios are listed in the Channel mix table.</p>
+      <p class="chart-summary" id="ltvSummary"></p>
+    </section>
+
+    <section class="card span-12" aria-labelledby="h-unit">
+      <div class="card-head"><h2 id="h-unit">Unit economics</h2><p>Best seller in each category, per unit at list price</p></div>
+      <div class="table-scroll" id="unitTable"></div>
+      <p class="sub">Square online rate 2.2%. Freight is our carrier cost less the average freight the customer paid (free over $150). Breakage allowance is the item's breakage rate × the cost of sending a replacement. Products under 35% contribution are flagged.</p>
+    </section>
+
+
+
+    <div class="section-label"><h2>Operations</h2></div>
+
+    <section class="card span-4" aria-labelledby="h-ful">
+      <div class="card-head"><h2 id="h-ful">Fulfilment &amp; freight</h2><p id="fulSub"></p></div>
+      <ul class="metric-rows" id="fulfilment"></ul>
+    </section>
+
+    <section class="card span-8" aria-labelledby="h-inv">
+      <div class="card-head"><h2 id="h-inv">Inventory</h2><p>As at 14 Oct, sell rate from the last 30 days</p></div>
+      <div class="table-scroll" id="invTable"></div>
+      <p class="sub">Reorder point = daily sell rate × (supplier lead time + 14 days safety stock). Stockout risk means stock runs out before a new order could land.</p>
+    </section>
+
+    <div class="section-label"><h2>Cash</h2></div>
+
+    <section class="card span-8" aria-labelledby="h-cash" data-chart="cash">
+      <div class="card-head"><h2 id="h-cash">Cash</h2><p id="cashSub"></p></div>
+      <dl class="stat-list" id="cashStats" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));"></dl>
+      <ul class="legend"><li><span class="key area" style="background:var(--s2)"></span>Cash in</li><li><span class="key area" style="background:var(--s3)"></span>Cash out</li><li><span class="key" style="background:var(--ink)"></span>Net cash flow</li></ul>
+      <div class="chart-box h-260"><canvas id="cashChart" role="img"></canvas></div>
+      <p class="chart-fallback">Chart library could not load. The figures are in the data table below.</p>
+      <p class="chart-summary" id="cashSummary"></p>
+      <details class="data"><summary>Show data table</summary><div class="table-scroll" id="cashTable"></div></details>
+    </section>
+
+    <section class="card span-4" aria-labelledby="h-pay">
+      <div class="card-head"><h2 id="h-pay">Upcoming payables</h2><p>Next 3 weeks</p></div>
+      <div class="table-scroll" id="payTable"></div>
+      <p class="sub" id="payNote"></p>
+    </section>
+
+
+  </div>
+</main>
+
+<footer class="foot gutter">
+  <div class="inner">
+    <p><strong>Demo data.</strong> Every figure is generated by a seeded model of a Melbourne homewares store and changes consistently with the period: revenue = orders × average order value, the funnel ends at the order count, and margins come from the unit costs in the table above.</p>
+    <p>Definitions. Net revenue is sales after WELCOME10 discounts and in-home-trial refunds, ex GST. Gross margin is net revenue less product cost, freight (outbound, trial returns and replacements, net of freight charged and White Glove fees), crating and packing, and Square fees. Net profit adds breakage-cover income ($12.50 option) and deducts marketing and $24,000 a month of fixed costs. LTV is average order value × gross margin × 1.55 lifetime orders.</p>
+  </div>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ---- DEMO DATA MODEL ----
+function buildModel() {
+  // Deterministic PRNG so the demo always shows the same numbers
+  let seed = 20261014;
+  const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const DAY = 864e5;
+  const END = Date.UTC(2026, 9, 14); // data through Wed 14 Oct 2026
+  const N = 730;
+
+  const SKUS = [
+    { id: 'FM-ARCH-180', name: 'Arch Floor Mirror, brushed brass 180 × 80', cat: 'Floor mirrors', price: 1190, cogs: 430, freight: 124, charged: 0, pack: 68, packType: 'Timber crate', brk: 0.0085, ret: 0.072, rate: 0.9, lead: 56, supplier: 'Foshan glass studio (CN)', cover: 22, onOrder: 60, eta: '9 Nov' },
+    { id: 'FM-OVAL-170', name: 'Oval Floor Mirror, travertine foot', cat: 'Floor mirrors', price: 1490, cogs: 560, freight: 128, charged: 0, pack: 72, packType: 'Timber crate', brk: 0.009, ret: 0.068, rate: 0.4, lead: 56, supplier: 'Foshan glass studio (CN)', cover: 96, onOrder: 0 },
+    { id: 'WM-WAVE-L', name: 'Wavy Wall Mirror, large 120 × 70', cat: 'Wall mirrors', price: 640, cogs: 245, freight: 78, charged: 0, pack: 46, packType: 'Timber crate', brk: 0.014, ret: 0.052, rate: 1.3, lead: 42, supplier: 'Foshan glass studio (CN)', cover: 49, onOrder: 0 },
+    { id: 'WM-WAVE-S', name: 'Wavy Wall Mirror, small 80 × 50', cat: 'Wall mirrors', price: 420, cogs: 150, freight: 54, charged: 0, pack: 34, packType: 'Timber crate', brk: 0.008, ret: 0.045, rate: 1.0, lead: 42, supplier: 'Foshan glass studio (CN)', cover: 118, onOrder: 0 },
+    { id: 'LT-TRAV-TL', name: 'Travertine Table Lamp', cat: 'Lighting', price: 420, cogs: 168, freight: 38, charged: 0, pack: 9, packType: 'Moulded carton', brk: 0.004, ret: 0.04, rate: 0.9, lead: 63, supplier: 'Denizli stoneworks (TR)', cover: 88, onOrder: 0 },
+    { id: 'LT-TRAV-WS', name: 'Travertine Wall Sconce', cat: 'Lighting', price: 280, cogs: 112, freight: 26, charged: 0, pack: 7, packType: 'Moulded carton', brk: 0.004, ret: 0.035, rate: 0.6, lead: 63, supplier: 'Denizli stoneworks (TR)', cover: 70, onOrder: 0 },
+    { id: 'VS-SCULPT-T', name: 'Sculpted Ceramic Vase, tall', cat: 'Vases', price: 145, cogs: 52, freight: 24, charged: 8, pack: 6, packType: 'Carton', brk: 0.007, ret: 0.02, rate: 1.5, lead: 21, supplier: 'Brunswick ceramic studio (VIC)', cover: 40, onOrder: 0 },
+    { id: 'VS-BUD-3', name: 'Bud Vase Trio', cat: 'Vases', price: 95, cogs: 31, freight: 16, charged: 9, pack: 5, packType: 'Carton', brk: 0.006, ret: 0.02, rate: 1.2, lead: 21, supplier: 'Brunswick ceramic studio (VIC)', cover: 64, onOrder: 0 },
+    { id: 'GL-AMBER-4', name: 'Ribbed Amber Glass, set of 4', cat: 'Glassware', price: 89, cogs: 34, freight: 21, charged: 6.5, pack: 7, packType: 'Carton + dividers', brk: 0.016, ret: 0.02, rate: 1.9, lead: 35, supplier: 'Bohemian glassworks (CZ)', cover: 18, onOrder: 240, eta: '4 Nov' },
+    { id: 'GL-AMBER-C', name: 'Ribbed Amber Carafe', cat: 'Glassware', price: 75, cogs: 27, freight: 18, charged: 7, pack: 6, packType: 'Carton + dividers', brk: 0.012, ret: 0.02, rate: 0.9, lead: 35, supplier: 'Bohemian glassworks (CZ)', cover: 150, onOrder: 0 },
+  ];
+  const CATS = ['Floor mirrors', 'Wall mirrors', 'Lighting', 'Vases', 'Glassware'];
+  const CHANNELS = [
+    { key: 'organic', short: 'Organic', name: 'Organic search', share: 0.37, newShare: 0.78, ltvF: 1.0, spendMo: 1500, spendNote: 'SEO retainer' },
+    { key: 'social', short: 'Insta / Pinterest', name: 'Instagram / Pinterest ads', share: 0.22, newShare: 0.86, ltvF: 0.9, spendMo: 5200 },
+    { key: 'google', short: 'Google Ads', name: 'Google Ads', share: 0.09, newShare: 0.84, ltvF: 0.8, spendMo: 5600 },
+    { key: 'email', short: 'Email', name: 'Email', share: 0.18, newShare: 0.22, ltvF: 1.55, spendMo: 450, spendNote: 'Platform fee' },
+    { key: 'referral', short: 'Referral', name: 'Referral / stylists', share: 0.14, newShare: 0.80, ltvF: 1.25, spendMo: 0, spendNote: '10% stylist commission' },
+  ];
+  const SEASON = [0.86, 0.82, 0.92, 0.94, 1.02, 1.08, 0.90, 0.92, 0.98, 1.04, 1.28, 1.12];
+  const WEEKDAY = [1.15, 1.05, 0.95, 0.95, 0.97, 0.90, 1.03]; // Sun..Sat
+  const ITEMS_PER_ORDER = 1.31, DISC = 0.016; // WELCOME10 on ~16% of orders
+  const OPEX_MO = 24000, COVER_FEE = 12.5, WG_FEE = 149, WG_COST = 128, SQUARE = 0.022;
+  const level = i => 0.64 * Math.pow(1 / 0.64, i / (N - 1));
+  const dayDate = i => new Date(END - (N - 1 - i) * DAY);
+
+  // Expected (noise-free) daily revenue and COGS, used for targets and purchase orders
+  const expDay = (i) => {
+    const d = dayDate(i), s = SEASON[d.getUTCMonth()] * level(i);
+    let rev = 0, cogs = 0;
+    for (const k of SKUS) { rev += k.rate * s * k.price * (1 - DISC - k.ret); cogs += k.rate * s * k.cogs; }
+    return { rev, cogs };
+  };
+
+  const days = [];
+  let cash = 208000;
+  for (let i = 0; i < N; i++) {
+    const d = dayDate(i), t = i / (N - 1);
+    const s = level(i) * SEASON[d.getUTCMonth()] * WEEKDAY[d.getUTCDay()];
+    const recent = i > N - 46;
+    const r = { date: d, units: 0, gross: 0, refunds: 0, cogs: 0, freight: 0, charged: 0, pack: 0, broken: 0, brkCost: 0, returnsU: 0, brkCat: {}, sku: {}, cat: {} };
+    for (const c of CATS) r.cat[c] = 0;
+    let floorU = 0;
+    for (const k of SKUS) {
+      const u = k.rate * s * (0.65 + 0.7 * rnd());
+      const ret = u * k.ret, brk = u * k.brk * (recent && k.cat === 'Wall mirrors' ? 1.9 : 1);
+      r.sku[k.id] = u; r.units += u; r.gross += u * k.price; r.refunds += ret * k.price; r.returnsU += ret;
+      r.cat[k.cat] += u * k.price * (1 - DISC) - ret * k.price;
+      r.cogs += (u - ret) * k.cogs + brk * k.cogs;
+      r.freight += (u + ret + brk) * k.freight; r.charged += u * k.charged; r.pack += (u + brk) * k.pack;
+      r.broken += brk; r.brkCat[k.cat] = (r.brkCat[k.cat] || 0) + brk; r.brkCost += brk * (k.cogs + k.freight + k.pack);
+      if (k.cat === 'Floor mirrors') floorU += u;
+    }
+    r.discount = r.gross * DISC;
+    r.revenue = r.gross - r.discount - r.refunds;
+    r.orders = r.units / ITEMS_PER_ORDER;
+    r.wgEligible = floorU; r.wg = floorU * (0.14 + 0.07 * t) * (0.8 + 0.4 * rnd());
+    r.charged += r.wg * WG_FEE; r.freight += r.wg * WG_COST;
+    r.coverAttach = 0.30 + 0.07 * t + (rnd() - 0.5) * 0.04;
+    r.cover = r.orders * r.coverAttach * COVER_FEE;
+    r.fees = SQUARE * (r.gross - r.discount + r.charged + r.cover);
+    r.gm = r.revenue - r.cogs - r.freight + r.charged - r.pack - r.fees; // breakage replacement cost already inside cogs/freight/pack
+    const cr = 0.0191 + 0.0027 * t + (rnd() - 0.5) * 0.0026;
+    r.sessions = r.orders / cr;
+    r.pv = r.sessions * (0.595 + 0.03 * rnd());
+    r.atc = r.sessions * (0.086 + 0.012 * rnd());
+    r.checkout = r.sessions * (0.042 + 0.006 * rnd());
+    // channels
+    let shareSum = 0; const sh = {};
+    for (const c of CHANNELS) { let x = c.share * (0.85 + 0.3 * rnd()); if (c.key === 'google') x *= 1.35 - 0.55 * t; sh[c.key] = x; shareSum += x; }
+    r.ch = {}; r.newCust = 0; r.marketing = 0;
+    for (const c of CHANNELS) {
+      const share = sh[c.key] / shareSum, rev = r.revenue * share, ord = r.orders * share;
+      const spend = c.key === 'referral' ? rev * 0.10 : c.spendMo * 12 / 365 * (c.key === 'organic' || c.key === 'email' ? 1 : (0.75 + 0.25 * t) * (0.85 + 0.3 * rnd()));
+      const nc = ord * c.newShare;
+      r.ch[c.key] = { rev, ord, spend, nc };
+      r.newCust += nc; r.marketing += spend;
+    }
+    r.opex = OPEX_MO * 12 / 365;
+    r.net = r.gm + r.cover - r.marketing - r.opex;
+    r.onTime = r.orders * ((i > N - 42 ? 0.931 : 0.962) + (rnd() - 0.5) * 0.02);
+    const nps = r.orders * 0.22; r.npsN = nps; r.npsP = nps * (0.68 + 0.04 * t + (rnd() - 0.5) * 0.06); r.npsD = nps * (0.085 - 0.02 * t);
+    r.reviews = r.orders * 0.12; r.stars = r.reviews * (4.74 + 0.08 * t + (rnd() - 0.5) * 0.1);
+    r.subs = 15 * level(i) * (0.7 + 0.6 * rnd()); r.unsubs = 2.4 * (0.6 + 0.8 * rnd());
+    // cash: Square payouts in, costs out, supplier purchase orders on the 3rd and 18th
+    r.cashIn = r.revenue + r.charged + r.cover;
+    let po = 0;
+    if (d.getUTCDate() === 3 || d.getUTCDate() === 18) {
+      let c30 = 0; for (let j = i; j < i + 30; j++) c30 += expDay(j).cogs;
+      const m = d.getUTCMonth(); const build = (m >= 7 && m <= 9) ? 1.45 : (m === 11 || m === 0) ? 0.7 : 1;
+      po = c30 * 0.5 * build;
+    }
+    r.po = po;
+    r.cashOut = po + (r.freight + r.pack - 0) + r.fees + r.marketing + r.opex + r.brkCost * 0; // product cost is paid through POs
+    cash += r.cashIn - r.cashOut; r.cash = cash;
+    days.push(r);
+  }
+  // Monthly revenue plan (FY plan set ~4% above trend), spread evenly across each month's days
+  const planByMonth = {};
+  for (let i = 0; i < N + 31; i++) { const d = dayDate(i), k = d.getUTCFullYear() + '-' + d.getUTCMonth(); planByMonth[k] = (planByMonth[k] || 0) + expDay(i).rev * 1.04; }
+  for (const k in planByMonth) planByMonth[k] = Math.round(planByMonth[k] / 500) * 500;
+  for (const r of days) { const d = r.date, k = d.getUTCFullYear() + '-' + d.getUTCMonth(); const dim = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate(); r.target = planByMonth[k] / dim; }
+  return { days, SKUS, CATS, CHANNELS, planByMonth, END, N, DAY, consts: { ITEMS_PER_ORDER, DISC, OPEX_MO, COVER_FEE, WG_FEE, WG_COST, SQUARE } };
+}
+
+// ---- APP ----
+(function () {
+  'use strict';
+  const M = buildModel();
+  const { days, SKUS, CATS, CHANNELS, consts } = M;
+  const N = days.length, DAY = M.DAY;
+  const $ = id => document.getElementById(id);
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- formatting ----------
+  const fmtMoney = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 });
+  const fmtMoney2 = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtInt = new Intl.NumberFormat('en-AU', { maximumFractionDigits: 0 });
+  const money = v => fmtMoney.format(Math.round(v)).replace('-$', '−$');
+  const money2 = v => fmtMoney2.format(v);
+  const int = v => fmtInt.format(Math.round(v));
+  const pct = (v, dp = 1) => (v * 100).toFixed(dp) + '%';
+  const compact = v => {
+    const a = Math.abs(v), s = v < 0 ? '−' : '';
+    if (a >= 1e6) return s + '$' + (a / 1e6).toFixed(2) + 'M';
+    if (a >= 1e3) return s + '$' + (a / 1e3).toFixed(a >= 1e5 ? 0 : 1) + 'k';
+    return s + '$' + Math.round(a);
+  };
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dShort = d => d.getUTCDate() + ' ' + MON[d.getUTCMonth()];
+  const range = (a, b) => {
+    const d1 = days[a].date, d2 = days[b - 1].date;
+    if (a === b - 1) return WD[d1.getUTCDay()] + ' ' + dShort(d1);
+    return d1.getUTCMonth() === d2.getUTCMonth() ? d1.getUTCDate() + '–' + dShort(d2) : dShort(d1) + ' – ' + dShort(d2);
+  };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---------- aggregation ----------
+  const SUM_KEYS = ['units', 'gross', 'refunds', 'cogs', 'freight', 'charged', 'pack', 'broken', 'brkCost', 'returnsU', 'discount', 'revenue', 'orders', 'wg', 'wgEligible', 'cover', 'fees', 'gm', 'sessions', 'pv', 'atc', 'checkout', 'newCust', 'marketing', 'opex', 'net', 'onTime', 'npsN', 'npsP', 'npsD', 'reviews', 'stars', 'subs', 'unsubs', 'cashIn', 'cashOut', 'po', 'target'];
+  function agg(a, b) {
+    const s = { a, b, days: b - a, ch: {}, cat: {}, sku: {}, brkCat: {} };
+    for (const k of SUM_KEYS) s[k] = 0;
+    for (const c of CHANNELS) s.ch[c.key] = { rev: 0, ord: 0, spend: 0, nc: 0 };
+    for (const c of CATS) { s.cat[c] = 0; s.brkCat[c] = 0; }
+    for (const k of SKUS) s.sku[k.id] = 0;
+    for (let i = Math.max(0, a); i < b; i++) {
+      const r = days[i];
+      for (const k of SUM_KEYS) s[k] += r[k];
+      for (const c of CHANNELS) { const x = r.ch[c.key], y = s.ch[c.key]; y.rev += x.rev; y.ord += x.ord; y.spend += x.spend; y.nc += x.nc; }
+      for (const c of CATS) { s.cat[c] += r.cat[c]; s.brkCat[c] += r.brkCat[c] || 0; }
+      for (const k of SKUS) s.sku[k.id] += r.sku[k.id];
+    }
+    // Displayed counts are whole numbers; ratios are computed from the displayed counts so they add up
+    s.ordersR = Math.round(s.orders);
+    s.sessionsR = Math.round(s.sessions);
+    s.aov = s.revenue / Math.max(1, s.ordersR);
+    s.cr = s.ordersR / Math.max(1, s.sessionsR);
+    s.gmPct = s.gm / s.revenue;
+    s.repeat = 1 - s.newCust / s.orders;
+    s.returns = s.returnsU / s.units;
+    s.brkRate = s.broken / s.units;
+    s.onTimeRate = s.onTime / s.orders;
+    s.attach = s.cover / consts.COVER_FEE / s.orders;
+    s.wgRate = s.wg / s.wgEligible;
+    s.cac = s.marketing / s.newCust;
+    s.ltv = s.aov * s.gmPct * 1.55;
+    s.ltvCac = s.ltv / s.cac;
+    s.nps = (s.npsP - s.npsD) / s.npsN * 100;
+    s.rating = s.stars / s.reviews;
+    s.cashNet = s.cashIn - s.cashOut;
+    return s;
+  }
+  function split(a, b, n) {
+    const out = [], len = b - a;
+    for (let k = 0; k < n; k++) out.push([a + Math.round(len * k / n), a + Math.round(len * (k + 1) / n)]);
+    return out;
+  }
+  const BUCKETS = { 30: { trend: 30, spark: 10, cash: 5 }, 90: { trend: 13, spark: 13, cash: 13 }, 365: { trend: 12, spark: 12, cash: 12 } };
+  const PERIOD_NAME = { 30: 'last 30 days', 90: 'last 90 days', 365: 'last 12 months' };
+  const PREV_NAME = { 30: 'previous 30 days', 90: 'previous 90 days', 365: 'previous 12 months' };
+
+  // Newsletter list size (anchored so the list stands at 9,240 on 14 Oct)
+  let listNow = 9240, totalAdds = 0; for (const r of days) totalAdds += r.subs - r.unsubs;
+  const listStart0 = listNow - totalAdds;
+  const listAt = i => { let v = listStart0; for (let j = 0; j < i; j++) v += days[j].subs - days[j].unsubs; return v; };
+
+  // Inventory snapshot from the last 30 days' sell rate
+  const last30 = agg(N - 30, N);
+  const END = M.END;
+  const inventory = SKUS.map(k => {
+    const rate = last30.sku[k.id] / 30;
+    const stock = Math.round(rate * k.cover);
+    const cover = stock / rate;
+    const rop = Math.ceil(rate * (k.lead + 14));
+    const etaDate = k.eta ? new Date(Date.UTC(2026, k.eta.includes('Nov') ? 10 : 9, parseInt(k.eta, 10))) : null;
+    const etaDays = etaDate ? Math.round((etaDate - END) / DAY) : null;
+    let status = 'Healthy';
+    if (cover < k.lead && !(k.onOrder && etaDays <= cover)) status = 'Stockout risk';
+    else if (stock <= rop) status = 'Reorder soon';
+    const reorderQty = Math.max(0, Math.ceil(rate * (k.lead + 14 + 60) - stock - (k.onOrder || 0)));
+    return { k, rate, stock, cover, rop, etaDays, status, reorderQty };
+  });
+
+  // Unit economics per product
+  function unitEcon(k) {
+    const freightNet = k.freight - k.charged;
+    const fees = k.price * consts.SQUARE;
+    const brk = k.brk * (k.cogs + k.freight + k.pack);
+    const contrib = k.price - k.cogs - freightNet - k.pack - fees - brk;
+    const fixed = k.cogs + freightNet + k.pack + brk;
+    const priceFor40 = fixed / (1 - consts.SQUARE - 0.40);
+    return { freightNet, fees, brk, contrib, pct: contrib / k.price, priceFor40 };
+  }
+
+  // ---------- theme ----------
+  const root = document.documentElement;
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  const store = {
+    get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } }
+  };
+  const savedTheme = store.get('mh-boh-theme');
+  if (savedTheme === 'light' || savedTheme === 'dark') root.setAttribute('data-theme', savedTheme);
+  const effectiveTheme = () => root.getAttribute('data-theme') || (mq && mq.matches ? 'dark' : 'light');
+  const SUN = '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>';
+  const MOON = '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>';
+  function paintToggle() {
+    const dark = effectiveTheme() === 'dark';
+    $('themeIcon').innerHTML = dark ? SUN : MOON;
+    $('themeToggle').setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  $('themeToggle').addEventListener('click', () => {
+    const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next); store.set('mh-boh-theme', next);
+    paintToggle(); renderCharts(false); renderSparks();
+  });
+  if (mq) {
+    const onSys = () => { if (!root.getAttribute('data-theme')) { paintToggle(); renderCharts(false); renderSparks(); } };
+    if (mq.addEventListener) mq.addEventListener('change', onSys); else if (mq.addListener) mq.addListener(onSys);
+  }
+  function tok() {
+    const cs = getComputedStyle(root), g = n => cs.getPropertyValue(n).trim();
+    return { ink: g('--ink'), ink2: g('--ink-2'), muted: g('--muted'), line: g('--line'), axis: g('--line-strong'), surface: g('--surface'),
+      s1: g('--s1'), s2: g('--s2'), s3: g('--s3'), wash: g('--s1-wash'), spark: g('--spark'), tipBg: g('--tooltip-bg'), tipInk: g('--tooltip-ink'),
+      sans: g('--font-sans') };
+  }
+
+  // ---------- state ----------
+  let P = parseInt(store.get('mh-boh-period'), 10);
+  if (![30, 90, 365].includes(P)) P = 30;
+  let cur, prev;
+  document.querySelectorAll('.seg button').forEach(btn => btn.addEventListener('click', () => {
+    P = parseInt(btn.dataset.period, 10); store.set('mh-boh-period', String(P)); render(true);
+  }));
+
+  // ---------- small builders ----------
+  const ICON = {
+    good: '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.3 5 8.6l4.5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    warn: '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5 11 10.5H1Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6 5v2.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="6" cy="8.9" r=".75" fill="currentColor"/></svg>',
+    bad: '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4.2 4.2l3.6 3.6M7.8 4.2 4.2 7.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+    info: '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6 5.4v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="6" cy="3.7" r=".75" fill="currentColor"/></svg>'
+  };
+  const pill = (kind, text) => `<span class="pill ${kind}">${ICON[kind]}${esc(text)}</span>`;
+  function table(head, rows, opts = {}) {
+    const th = head.map(h => `<th scope="col">${h}</th>`).join('');
+    const tb = rows.map(r => '<tr>' + r.map((c, i) => i === 0 && opts.rowHeader !== false ? `<td class="name">${c}</td>` : `<td${typeof c === 'object' && c && c.cls ? ` class="${c.cls}"` : ''}>${typeof c === 'object' && c ? c.html : c}</td>`).join('') + '</tr>').join('');
+    const tf = opts.foot ? '<tfoot><tr>' + opts.foot.map(c => `<td>${c}</td>`).join('') + '</tr></tfoot>' : '';
+    return `<table${opts.caption ? '' : ''}>${opts.caption ? `<caption class="sr-only">${esc(opts.caption)}</caption>` : ''}<thead><tr>${th}</tr></thead><tbody>${tb}</tbody>${tf}</table>`;
+  }
+
+  // ---------- KPIs ----------
+  const KPIS = [
+    { key: 'revenue', label: 'Net revenue', val: s => s.revenue, fmt: money, delta: 'pct', up: true },
+    { key: 'orders', label: 'Orders', val: s => s.ordersR, fmt: int, delta: 'pct', up: true },
+    { key: 'aov', label: 'Average order value', val: s => s.aov, fmt: money, delta: 'pct', up: true },
+    { key: 'cr', label: 'Conversion rate', val: s => s.cr, fmt: v => pct(v, 2), delta: 'pts', up: true, dp: 2 },
+    { key: 'gm', label: 'Gross margin', note: 'after freight & fees', val: s => s.gmPct, fmt: v => pct(v, 1), delta: 'pts', up: true },
+    { key: 'net', label: 'Net profit', val: s => s.net, fmt: money, delta: 'abs', up: true },
+    { key: 'repeat', label: 'Repeat customer rate', note: 'of orders', val: s => s.repeat, fmt: v => pct(v, 1), delta: 'pts', up: true },
+    { key: 'returns', label: 'Returns rate', note: 'of items', val: s => s.returns, fmt: v => pct(v, 1), delta: 'pts', up: false }
+  ];
+  function deltaHtml(k, a, b) {
+    let txt, dir;
+    if (k.delta === 'pct') { const d = (a - b) / Math.abs(b); dir = Math.abs(d) < 0.0005 ? 0 : Math.sign(d); txt = (d >= 0 ? '+' : '−') + Math.abs(d * 100).toFixed(1) + '%'; }
+    else if (k.delta === 'pts') { const d = (a - b) * 100, dp = k.dp || 1; dir = Math.abs(d) < Math.pow(10, -dp) / 2 ? 0 : Math.sign(d); txt = (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(dp) + ' pts'; }
+    else { const d = a - b; dir = Math.sign(Math.round(d)); txt = (d >= 0 ? '+' : '−') + money(Math.abs(d)).replace('−', ''); }
+    if (dir === 0) txt = '±' + txt.slice(1);
+    const good = dir === 0 ? 'flat' : ((dir > 0) === k.up ? 'good' : 'bad');
+    const arrow = dir > 0 ? '▲' : dir < 0 ? '▼' : '■';
+    const word = good === 'good' ? 'better' : good === 'bad' ? 'worse' : 'unchanged';
+    return `<span class="delta ${good}"><span aria-hidden="true">${arrow}</span>${txt}<span class="sr-only"> (${word})</span></span>`;
+  }
+  let sparkData = [];
+  function renderKpis() {
+    const bs = split(N - P, N, BUCKETS[P].spark).map(([a, b]) => agg(a, b));
+    sparkData = [];
+    $('kpis').innerHTML = KPIS.map((k, i) => {
+      const series = bs.map(k.val);
+      sparkData.push(series);
+      return `<article class="kpi" aria-label="${esc(k.label)}">
+        <div class="kpi-label">${esc(k.label)}${k.note ? `<small>${esc(k.note)}</small>` : ''}</div>
+        <div class="kpi-value">${k.fmt(k.val(cur))}</div>
+        <div class="kpi-foot">${deltaHtml(k, k.val(cur), k.val(prev))}<span>vs ${PREV_NAME[P]} (${k.fmt(k.val(prev))})</span></div>
+        <svg class="spark" data-i="${i}" role="img" aria-label="${esc(k.label)} trend across the ${PERIOD_NAME[P]}, ${k.fmt(series[0])} to ${k.fmt(series[series.length - 1])}"></svg>
+      </article>`;
+    }).join('');
+    renderSparks();
+  }
+  function renderSparks() {
+    const t = tok();
+    document.querySelectorAll('svg.spark').forEach(svg => {
+      const series = sparkData[+svg.dataset.i]; if (!series) return;
+      const w = Math.max(60, svg.clientWidth || 200), h = 40, pad = 5;
+      const min = Math.min(...series), max = Math.max(...series), span = max - min || 1;
+      const x = i => pad + (w - pad * 2) * i / (series.length - 1);
+      const y = v => h - pad - (h - pad * 2) * (v - min) / span;
+      const pts = series.map((v, i) => [x(i), y(v)]);
+      const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+      const area = line + ` L${x(series.length - 1).toFixed(1)} ${h} L${x(0).toFixed(1)} ${h} Z`;
+      const last = pts[pts.length - 1];
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      svg.innerHTML = `<path d="${area}" fill="${t.wash}"/><path d="${line}" fill="none" stroke="${t.spark}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>` +
+        `<circle cx="${last[0]}" cy="${last[1]}" r="4" fill="${t.s1}" stroke="${t.surface}" stroke-width="2"/>`;
+    });
+  }
+
+  // ---------- attention + health ----------
+  function deriveIssues() {
+    const out = [];
+    const L = P;
+    // margin
+    for (const k of SKUS) {
+      const u = unitEcon(k);
+      if (u.pct < 0.35 && cur.sku[k.id] > 0) out.push({ sev: 'bad', area: 'Margin', what: `${k.name} earns ${pct(u.pct)} contribution`,
+        doit: `Freight, packing and breakage take ${money2(u.freightNet + k.pack + u.brk)} of an ${money(k.price)} sale. Lift the price to <b>${money(Math.ceil(u.priceFor40))}</b> for 40%, or sell it only in bundles over $150.` });
+    }
+    // stock
+    for (const v of inventory) {
+      if (v.status === 'Stockout risk') {
+        const gap = v.etaDays != null ? v.etaDays - Math.floor(v.cover) : null;
+        out.push({ sev: 'bad', area: 'Inventory', what: `${v.k.name}: ${Math.floor(v.cover)} days of stock, ${v.k.lead}-day lead time`,
+          doit: v.k.onOrder ? `${v.k.onOrder} units land ${v.k.eta}, about <b>${gap} days after</b> projected sell-out. Ask ${esc(v.k.supplier.replace(/ \(.*\)/, ''))} to split-ship, or pause paid ads on this item until stock lands.` : `Place a purchase order for <b>${v.reorderQty} units</b> today.` });
+      } else if (v.status === 'Reorder soon') {
+        out.push({ sev: 'warn', area: 'Inventory', what: `${v.k.name} is below its reorder point`, doit: `${v.stock} on hand against a reorder point of ${v.rop}. Order <b>${v.reorderQty} units</b> this week to hold 60 days of cover after the ${v.k.lead}-day lead time.` });
+      }
+    }
+    // channels
+    for (const c of CHANNELS) {
+      const x = cur.ch[c.key]; if (x.spend <= 0) continue;
+      const roas = x.rev / x.spend, cac = x.spend / x.nc, ratio = cur.ltv * c.ltvF / cac;
+      if (roas < 2) out.push({ sev: 'bad', area: 'Marketing', what: `${c.name} ROAS is ${roas.toFixed(1)}×`,
+        doit: `${money(x.spend)} spent for ${money(x.rev)} revenue and a ${money(cac)} CAC. Keep brand search only and move about <b>${money(x.spend / L * 30.4 * 0.6)}/month</b> to email and stylist referrals.` });
+      else if (ratio < 3 && c.key !== 'organic' && c.key !== 'email') out.push({ sev: 'warn', area: 'Marketing', what: `${c.name} LTV : CAC is ${ratio.toFixed(1)} : 1`,
+        doit: `CAC is ${money(cac)}; it needs to be under <b>${money(cur.ltv * c.ltvF / 3)}</b> to reach 3 : 1. Shift spend to retargeting and Pinterest catalogue ads.` });
+    }
+    // breakage
+    if (cur.brkRate > 0.01) {
+      let worst = CATS[0]; for (const c of CATS) if (cur.brkCat[c] > cur.brkCat[worst]) worst = c;
+      out.push({ sev: cur.brkRate > 0.015 ? 'bad' : 'warn', area: 'Freight', what: `Breakage is ${pct(cur.brkRate, 2)} of items shipped`,
+        doit: `${worst} account for ${pct(cur.brkCat[worst] / cur.broken, 0)} of breakages (${money(cur.brkCost)} in replacements). Add corner blocks to the wavy-mirror crate and photograph crates at pickup.` });
+    }
+    if (cur.onTimeRate < 0.95) out.push({ sev: cur.onTimeRate < 0.92 ? 'bad' : 'warn', area: 'Freight', what: `On-time delivery is ${pct(cur.onTimeRate)}`,
+      doit: `${int(cur.orders - cur.onTime)} deliveries ran late. Raise it with the fragile-freight carrier and quote 2 extra days for regional VIC and interstate.` });
+    if (cur.revenue < cur.target * 0.98) out.push({ sev: 'warn', area: 'Sales', what: `Revenue is ${pct(1 - cur.revenue / cur.target)} behind plan`,
+      doit: `${money(cur.target - cur.revenue)} short of the ${PERIOD_NAME[P]} plan. Run the Black Friday preview to the email list early.` });
+    if (cur.gmPct < 0.40) out.push({ sev: 'warn', area: 'Margin', what: `Gross margin is ${pct(cur.gmPct)}`, doit: `Freight subsidy is ${money((cur.freight - cur.charged) / cur.ordersR)} an order. Test a $29 flat crate fee under $400.` });
+    if (cur.returns > 0.05) out.push({ sev: 'warn', area: 'Returns', what: `Returns are ${pct(cur.returns)} of items`, doit: 'Review trial returns by product and add room-sizing guidance to floor mirror pages.' });
+    // runway
+    if (cash.runway != null && cash.runway < 6) out.push({ sev: 'bad', area: 'Cash', what: `Runway is ${cash.runway.toFixed(1)} months`, doit: 'Delay the next Christmas purchase order or negotiate 60-day terms.' });
+    else if (cash.runway != null && cash.runway < 18) out.push({ sev: 'info', area: 'Cash', what: `Cash is down ${money(-cash.net90)} over 90 days`, doit: `Christmas stock is being paid for ahead of sales. Runway is ${cash.runway.toFixed(0)} months at this rate, so hold the next PO until November sales confirm demand.` });
+    const order = { bad: 0, warn: 1, info: 2 };
+    return out.sort((a, b) => order[a.sev] - order[b.sev]);
+  }
+  const SEV_LABEL = { bad: 'Critical', warn: 'Warning', info: 'Watch' };
+  function renderAttention() {
+    const items = deriveIssues();
+    const n = { bad: 0, warn: 0, info: 0 }; items.forEach(i => n[i.sev]++);
+    $('attnCount').textContent = `${items.length} items · ${n.bad} critical, ${n.warn} warnings`;
+    const li = i => `<li><div>${pill(i.sev, SEV_LABEL[i.sev])}</div><div><div class="what">${esc(i.what)}</div><div class="do">${i.doit}</div><div class="where">${esc(i.area)}</div></div></li>`;
+    const SHOW = 6, more = items.slice(SHOW);
+    $('attention').innerHTML = items.slice(0, SHOW).map(li).join('') || '<li><div>' + pill('good', 'Clear') + '</div><div class="what">Nothing needs action in this period.</div></li>';
+    $('attentionMore').innerHTML = more.map(li).join('');
+    $('attnMoreWrap').hidden = more.length === 0;
+    $('attnMoreLabel').textContent = `Show ${more.length} more (${more.map(i => SEV_LABEL[i.sev].toLowerCase()).filter((v, k, a) => a.indexOf(v) === k).join(', ')})`;
+  }
+  function renderHealth() {
+    const checks = [
+      { rule: 'Gross margin', target: '≥ 40%', v: cur.gmPct, show: pct(cur.gmPct), pass: v => v >= 0.40, warn: v => v >= 0.37 },
+      { rule: 'LTV : CAC', target: '≥ 3 : 1', v: cur.ltvCac, show: cur.ltvCac.toFixed(1) + ' : 1', pass: v => v >= 3, warn: v => v >= 2.5 },
+      { rule: 'Cash runway', target: '≥ 6 months', v: cash.runway == null ? 99 : cash.runway, show: cash.runway == null ? 'Cash-positive' : cash.runway.toFixed(1) + ' mo', pass: v => v >= 6, warn: v => v >= 4 },
+      { rule: 'Conversion rate', target: '≥ 2%', v: cur.cr, show: pct(cur.cr, 2), pass: v => v >= 0.02, warn: v => v >= 0.017 },
+      { rule: 'Returns rate', target: '≤ 5%', v: cur.returns, show: pct(cur.returns), pass: v => v <= 0.05, warn: v => v <= 0.065 },
+      { rule: 'Breakage rate', target: '≤ 1%', v: cur.brkRate, show: pct(cur.brkRate, 2), pass: v => v <= 0.01, warn: v => v <= 0.015 },
+      { rule: 'On-time delivery', target: '≥ 95%', v: cur.onTimeRate, show: pct(cur.onTimeRate), pass: v => v >= 0.95, warn: v => v >= 0.92 }
+    ];
+    const n = { good: 0, warn: 0, bad: 0 };
+    $('health').innerHTML = checks.map(c => {
+      const st = c.pass(c.v) ? 'good' : c.warn(c.v) ? 'warn' : 'bad'; n[st]++;
+      return `<li><div class="rule">${esc(c.rule)}<small>Target ${esc(c.target)}</small></div><div class="val">${esc(c.show)}</div><div>${pill(st, st === 'good' ? 'Pass' : st === 'warn' ? 'Warn' : 'Fail')}</div></li>`;
+    }).join('');
+    $('healthScore').innerHTML = `<span class="sub">${n.good} of ${checks.length} passing</span>`;
+  }
+
+  // ---------- sales: trend, goal, category, channel ----------
+  let trendBuckets = [], cashBuckets = [];
+  function renderTrendText() {
+    trendBuckets = split(N - P, N, BUCKETS[P].trend).map(([a, b]) => agg(a, b));
+    const gap = cur.revenue - cur.target;
+    const unit = P === 30 ? 'day' : P === 90 ? 'week' : 'month (rolling 30-day blocks)';
+    $('trendSub').textContent = `Per ${unit}, ${PERIOD_NAME[P]}`;
+    let best = trendBuckets[0]; for (const b of trendBuckets) if (b.revenue > best.revenue) best = b;
+    const s = `Net revenue over the ${PERIOD_NAME[P]} was ${money(cur.revenue)} against a plan of ${money(cur.target)}, ${gap >= 0 ? money(gap) + ' ahead' : money(-gap) + ' behind'} (${pct(cur.revenue / cur.target, 1)} of plan). Strongest ${P === 30 ? 'day' : 'block'}: ${range(best.a, best.b)} at ${money(best.revenue)}.`;
+    $('trendSummary').textContent = s;
+    $('trendChart').setAttribute('aria-label', 'Line chart of net revenue against plan. ' + s);
+    $('trendTable').innerHTML = table(['Period', 'Net revenue', 'Plan', 'vs plan', 'Orders'],
+      trendBuckets.map(b => [range(b.a, b.b), money(b.revenue), money(b.target), pct(b.revenue / b.target - 1), int(b.orders)]),
+      { caption: 'Net revenue against plan', foot: ['Total', money(cur.revenue), money(cur.target), pct(cur.revenue / cur.target - 1), int(cur.ordersR)] });
+  }
+  function renderGoal() {
+    // Always the current calendar month: 1–14 Oct 2026
+    const a = N - 14, mtd = agg(a, N);
+    const plan = M.planByMonth['2026-9'];
+    const share = mtd.revenue / plan, elapsed = 14 / 31, projected = mtd.revenue / 14 * 31;
+    $('goalMtd').textContent = money(mtd.revenue);
+    $('goalOf').textContent = `of ${money(plan)} plan`;
+    $('goalFill').style.width = Math.min(100, share * 100).toFixed(1) + '%';
+    $('goalPace').style.left = (elapsed * 100).toFixed(1) + '%';
+    $('goalPaceLabel').textContent = `Today, day 14 (${pct(elapsed, 0)})`;
+    const m = $('goalMeter');
+    m.setAttribute('aria-valuenow', (share * 100).toFixed(0));
+    m.setAttribute('aria-label', `October revenue ${pct(share, 0)} of plan with ${pct(elapsed, 0)} of the month gone`);
+    const need = (plan - mtd.revenue) / 17;
+    $('goalStats').innerHTML = `
+      <div><dt>Progress</dt><dd>${pct(share, 0)} <small>of plan</small></dd></div>
+      <div><dt>Projected month</dt><dd>${compact(projected)} <small>${projected >= plan ? '+' : '−'}${pct(Math.abs(projected / plan - 1), 1)}</small></dd></div>
+      <div><dt>Needed per day</dt><dd>${money(need)}</dd></div>
+      <div><dt>Running per day</dt><dd>${money(mtd.revenue / 14)}</dd></div>`;
+    $('goalNote').textContent = projected >= plan
+      ? 'On pace to beat the October plan. Plan figures come from the FY27 budget, July to June.'
+      : `Behind pace by ${money(plan * elapsed - mtd.revenue)}. Plan figures come from the FY27 budget, July to June.`;
+    // FY27 to date (July onwards), by calendar month
+    const rows = []; let ta = 0, tp = 0;
+    for (const [m, label] of [[6, 'July'], [7, 'August'], [8, 'September'], [9, 'October (to 14th)']]) {
+      let a = -1, b = -1;
+      for (let i = 0; i < N; i++) { const d = days[i].date; if (d.getUTCFullYear() === 2026 && d.getUTCMonth() === m) { if (a < 0) a = i; b = i + 1; } }
+      const s = agg(a, b); ta += s.revenue; tp += s.target;
+      rows.push([label, money(s.revenue), money(s.target), s.revenue >= s.target ? pill('good', pct(s.revenue / s.target, 0)) : pill('warn', pct(s.revenue / s.target, 0))]);
+    }
+    $('fyTable').innerHTML = table(['FY27 month', 'Actual', 'Plan', 'Of plan'], rows.map(r => [r[0], r[1], r[2], { cls: 'st', html: r[3] }]), { caption: 'FY27 revenue against plan by month', foot: ['Year to date', money(ta), money(tp), pct(ta / tp, 0)] });
+  }
+  function renderCatText() {
+    const rows = CATS.map(c => ({ c, v: cur.cat[c], p: prev.cat[c] })).sort((a, b) => b.v - a.v);
+    $('catSub').textContent = `Net revenue, ${PERIOD_NAME[P]}`;
+    const top = rows[0];
+    const s = `${top.c} lead with ${money(top.v)} (${pct(top.v / cur.revenue, 0)} of revenue). ` +
+      rows.slice(1).map(r => `${r.c} ${money(r.v)}`).join(', ') + '.';
+    $('catSummary').textContent = s;
+    $('catChart').setAttribute('aria-label', 'Bar chart of net revenue by category. ' + s);
+    $('catTable').innerHTML = table(['Category', 'Net revenue', 'Share', `vs ${PREV_NAME[P]}`], rows.map(r => [r.c, money(r.v), pct(r.v / cur.revenue), (r.v >= r.p ? '+' : '−') + pct(Math.abs(r.v / r.p - 1))]),
+      { caption: 'Net revenue by category', foot: ['Total', money(cur.revenue), '100%', (cur.revenue >= prev.revenue ? '+' : '−') + pct(Math.abs(cur.revenue / prev.revenue - 1))] });
+    return rows;
+  }
+  function channelRows() {
+    return CHANNELS.map(c => {
+      const x = cur.ch[c.key];
+      const roas = x.spend > 0 ? x.rev / x.spend : null, cac = x.spend / x.nc;
+      return { c, rev: x.rev, spend: x.spend, roas, nc: x.nc, cac, ratio: cur.ltv * c.ltvF / cac };
+    }).sort((a, b) => b.rev - a.rev);
+  }
+  function renderChanText() {
+    const rows = channelRows();
+    let totalSpend = 0, totalNc = 0; rows.forEach(r => { totalSpend += r.spend; totalNc += r.nc; });
+    $('chanTable').innerHTML = table(['Channel', 'Revenue', 'Share', 'Spend', 'ROAS', 'New cust.', 'CAC', 'LTV:CAC'],
+      rows.map(r => [esc(r.c.name) + (r.c.spendNote ? `<small>${esc(r.c.spendNote)}</small>` : ''), money(r.rev), pct(r.rev / cur.revenue, 0), money(r.spend),
+        r.roas == null ? '—' : (r.roas < 2 ? { cls: 'flag', html: r.roas.toFixed(1) + '× ⚠' } : r.roas.toFixed(1) + '×'), int(r.nc), money(r.cac),
+        r.ratio < 3 ? { cls: 'flag', html: r.ratio.toFixed(1) } : r.ratio.toFixed(1)]),
+      { caption: 'Channel revenue, spend, ROAS and CAC', foot: ['All channels', money(cur.revenue), '100%', money(totalSpend), (cur.revenue / totalSpend).toFixed(1) + '×', int(totalNc), money(cur.cac), cur.ltvCac.toFixed(1)] });
+    const weak = rows.filter(r => r.roas != null && r.roas < 2).map(r => r.c.name);
+    const s = `${rows[0].c.name} brings the most revenue (${pct(rows[0].rev / cur.revenue, 0)}). Blended ROAS is ${(cur.revenue / totalSpend).toFixed(1)}× and blended CAC ${money(cur.cac)}.` + (weak.length ? ` ${weak.join(', ')} returns under 2× and is flagged.` : '');
+    $('chanSummary').textContent = s;
+    $('chanChart').setAttribute('aria-label', 'Bar chart of revenue by channel. ' + s);
+    return rows;
+  }
+  function renderFunnel() {
+    const st = [
+      ['Sessions', cur.sessionsR], ['Product views', Math.round(cur.pv)], ['Added to cart', Math.round(cur.atc)],
+      ['Checkout started', Math.round(cur.checkout)], ['Purchased', cur.ordersR]
+    ];
+    $('funnelSub').textContent = PERIOD_NAME[P].replace(/^l/, 'L');
+    $('funnel').innerHTML = st.map((s, i) => {
+      const w = s[1] / st[0][1] * 100;
+      const drop = i < st.length - 1 ? `<li aria-hidden="false"><span></span><div class="drop"><span>↓ <b>${pct(1 - st[i + 1][1] / s[1])}</b> drop off</span><span>${pct(st[i + 1][1] / s[1])} continue</span></div></li>` : '';
+      return `<li><span class="stage">${s[0]}</span><span class="bar" role="img" aria-label="${s[0]}: ${int(s[1])}, ${pct(s[1] / st[0][1], 1)} of sessions"><i style="width:${w.toFixed(2)}%"></i></span><span class="count">${int(s[1])}</span></li>` + drop;
+    }).join('');
+    const atcToBuy = cur.ordersR / cur.atc;
+    $('funnelSummary').textContent = `${pct(cur.cr, 2)} of sessions end in a purchase. The biggest leak is product view to cart (${pct(1 - cur.atc / cur.pv)} drop off); ${pct(atcToBuy, 0)} of carts convert, and ${pct(cur.ordersR / cur.checkout, 0)} of started checkouts complete.`;
+  }
+  function renderUnit() {
+    const rows = CATS.map(c => {
+      let best = null; for (const k of SKUS) if (k.cat === c && (!best || cur.sku[k.id] * k.price > cur.sku[best.id] * best.price)) best = k;
+      return best;
+    });
+    $('unitTable').innerHTML = table(['Product', 'Price', 'COGS', 'Freight', 'Crating / pack', 'Square 2.2%', 'Breakage', 'Contribution', 'Margin', ''],
+      rows.map(k => {
+        const u = unitEcon(k), low = u.pct < 0.35;
+        return [esc(k.name) + `<small>${esc(k.cat)} · ${int(cur.sku[k.id])} sold</small>`, money(k.price), money(k.cogs), money2(u.freightNet), money(k.pack) + `<br><small style="color:var(--muted)">${esc(k.packType)}</small>`, money2(u.fees), money2(u.brk),
+          money2(u.contrib), low ? { cls: 'flag', html: pct(u.pct) } : pct(u.pct), { cls: 'st', html: low ? pill('bad', 'Below 35%') : u.pct < 0.40 ? pill('warn', 'Under 40%') : pill('good', 'OK') }];
+      }), { caption: 'Unit economics of the best seller in each category' });
+  }
+
+  // ---------- operations ----------
+  function renderFulfilment() {
+    const o = cur.ordersR;
+    const costPer = cur.freight / o, chargedPer = cur.charged / o;
+    $('fulSub').textContent = `${int(o)} orders, ${PERIOD_NAME[P]}`;
+    const rows = [
+      { label: 'On-time delivery', sub: 'Delivered by the promised date', val: pct(cur.onTimeRate), fill: (cur.onTimeRate - 0.8) / 0.2, mark: 0.75, left: `${int(cur.orders - cur.onTime)} late of ${int(o)}`, right: 'Target 95%', note: '' },
+      { label: 'Breakage rate', sub: 'Items arriving damaged', val: pct(cur.brkRate, 2), fill: cur.brkRate / 0.02, mark: 0.5, left: `${int(cur.broken)} items replaced`, right: 'Limit 1%', note: '' },
+      { label: 'Breakage-cover attach', sub: '$12.50 option at checkout', val: pct(cur.attach, 0), fill: cur.attach, mark: null, left: `Cover income ${money(cur.cover)}`, right: `Breakage cost ${money(cur.brkCost)}` },
+      { label: 'Freight subsidy per order', sub: `Carrier cost ${money2(costPer)} vs charged ${money2(chargedPer)}`, val: money2(costPer - chargedPer), fill: chargedPer / costPer, mark: null, left: `Recovered ${pct(chargedPer / costPer, 0)} of freight cost`, right: `${pct((cur.freight - cur.charged) / cur.revenue)} of revenue` },
+      { label: 'White Glove uptake', sub: 'Share of floor-mirror orders', val: pct(cur.wgRate, 0), fill: cur.wgRate / 0.4, mark: null, left: `${int(cur.wg)} deliveries at $149`, right: 'Carrier cost $128' }
+    ];
+    $('fulfilment').innerHTML = rows.map(r => `<li><div class="m-label">${esc(r.label)}<small>${esc(r.sub)}</small></div><div class="m-val">${r.val}</div>
+      <div class="m-bar" aria-hidden="true"><i style="width:${(Math.max(0, Math.min(1, r.fill)) * 100).toFixed(1)}%"></i>${r.mark != null ? `<b style="left:${r.mark * 100}%"></b>` : ''}</div>
+      <div class="m-note"><span>${esc(r.left)}${r.note ? ' · ' + esc(r.note) : ''}</span><span>${esc(r.right)}</span></div></li>`).join('');
+  }
+  function renderInventory() {
+    const kind = { 'Healthy': 'good', 'Reorder soon': 'warn', 'Stockout risk': 'bad' };
+    const order = { 'Stockout risk': 0, 'Reorder soon': 1, 'Healthy': 2 };
+    const rows = [...inventory].sort((a, b) => order[a.status] - order[b.status] || a.cover - b.cover);
+    $('invTable').innerHTML = table(['Product', 'Status', 'On hand', 'Sells / day', 'Days of cover', 'Reorder point', 'Lead time', 'On order'],
+      rows.map(v => [esc(v.k.name) + `<small>${esc(v.k.id)} · ${esc(v.k.supplier)}</small>`, { cls: 'st', html: pill(kind[v.status], v.status) }, int(v.stock), v.rate.toFixed(1),
+        v.cover < v.k.lead ? { cls: 'flag', html: Math.floor(v.cover) } : Math.floor(v.cover), int(v.rop), v.k.lead + ' days', v.k.onOrder ? `${v.k.onOrder} · ${v.k.eta}` : '—']),
+      { caption: 'Inventory by product' });
+  }
+
+  // ---------- cash & customers ----------
+  let cash = {};
+  function computeCash() {
+    const s90 = agg(N - 90, N);
+    const onHand = days[N - 1].cash;
+    const burn = -s90.cashNet / 90 * 30.4;
+    cash = { onHand, net90: s90.cashNet, burn, runway: burn > 0 ? onHand / burn : null };
+  }
+  const PAYABLES = () => {
+    const f30 = agg(N - 30, N);
+    return [
+      { due: '22 Oct', what: 'Foshan glass studio', note: 'Balance on 60 Arch Floor Mirrors (70%)', amt: 60 * 430 * 0.7 },
+      { due: '24 Oct', what: 'Timber crate maker', note: 'September crates', amt: Math.round(f30.sku['FM-ARCH-180'] * 68 + f30.sku['FM-OVAL-170'] * 72 + f30.sku['WM-WAVE-L'] * 46 + f30.sku['WM-WAVE-S'] * 34) },
+      { due: '28 Oct', what: 'Bohemian glassworks', note: 'Balance on 240 glass sets (70%)', amt: 240 * 34 * 0.7 },
+      { due: '31 Oct', what: 'Fragile-freight carrier', note: 'October account', amt: Math.round(f30.freight) },
+      { due: '1 Nov', what: 'Warehouse rent, Brunswick', note: 'Monthly', amt: 5400 },
+      { due: '3 Nov', what: 'Meta & Pinterest ads', note: 'October billing', amt: Math.round(f30.ch.social.spend) },
+      { due: '5 Nov', what: 'Google Ads', note: 'October billing', amt: Math.round(f30.ch.google.spend) }
+    ];
+  };
+  function renderCashText() {
+    cashBuckets = split(N - P, N, BUCKETS[P].cash).map(([a, b]) => agg(a, b));
+    const pay = PAYABLES(); let payTotal = 0; pay.forEach(p => payTotal += p.amt);
+    $('cashSub').textContent = `Square payouts in, costs and stock purchases out, ${PERIOD_NAME[P]}`;
+    $('cashStats').innerHTML = `
+      <div><dt>Cash on hand</dt><dd>${money(cash.onHand)}</dd></div>
+      <div><dt>Net cash flow</dt><dd>${cur.cashNet >= 0 ? '+' : ''}${money(cur.cashNet)}</dd></div>
+      <div><dt>Runway</dt><dd>${cash.runway == null ? 'Cash-positive' : cash.runway.toFixed(1) + ' <small>months</small>'}</dd></div>
+      <div><dt>Due next 3 weeks</dt><dd>${money(payTotal)}</dd></div>`;
+    const s = `Cash in ${money(cur.cashIn)}, cash out ${money(cur.cashOut)} over the ${PERIOD_NAME[P]}, including ${money(cur.po)} of stock purchases. ` +
+      (cash.runway == null ? 'Cash grew over the last 90 days.' : `Runway is ${cash.runway.toFixed(1)} months at the last 90 days' burn of ${money(cash.burn)} a month; profit is positive but Christmas stock is being bought ahead of sales.`);
+    $('cashSummary').textContent = s;
+    $('cashChart').setAttribute('aria-label', 'Bar chart of cash in and cash out with net cash flow line. ' + s);
+    $('cashTable').innerHTML = table(['Period', 'Cash in', 'Cash out', 'of which stock', 'Net'],
+      cashBuckets.map(b => [range(b.a, b.b), money(b.cashIn), money(b.cashOut), money(b.po), money(b.cashNet)]),
+      { caption: 'Cash in and out', foot: ['Total', money(cur.cashIn), money(cur.cashOut), money(cur.po), money(cur.cashNet)] });
+    $('payNote').textContent = `Covered ${(cash.onHand / payTotal).toFixed(1)} times by cash on hand. Supplier balances fall due when stock ships.`;
+    $('payTable').innerHTML = table(['Payee', 'Due', 'Amount'], pay.map(p => [esc(p.what) + `<small>${esc(p.note)}</small>`, p.due, money(p.amt)]),
+      { caption: 'Upcoming payables', foot: ['Total', '', money(payTotal)] });
+  }
+  function renderCustomers() {
+    const listEnd = Math.round(listAt(N)), listBegin = Math.round(listAt(N - P));
+    const welcome = cur.ordersR * 0.16;
+    $('custSub').textContent = PERIOD_NAME[P].replace(/^l/, 'L');
+    $('custStats').innerHTML = `
+      <div><dt>Customer lifetime value</dt><dd>${money(cur.ltv)}</dd></div>
+      <div><dt>Blended CAC</dt><dd>${money(cur.cac)}</dd></div>
+      <div><dt>LTV : CAC</dt><dd>${cur.ltvCac.toFixed(1)} <small>: 1</small> ${cur.ltvCac >= 3 ? pill('good', 'Above 3') : pill('warn', 'Below 3')}</dd></div>
+      <div><dt>Net Promoter Score</dt><dd>${cur.nps.toFixed(0)} <small>${int(cur.npsN)} responses</small></dd></div>
+      <div><dt>Average review</dt><dd>${cur.rating.toFixed(2)} <small>/ 5 · ${int(cur.reviews)} reviews</small></dd></div>
+      <div><dt>Newsletter list</dt><dd>${int(listEnd)} <small>+${int(listEnd - listBegin)} (${pct((listEnd - listBegin) / listBegin)})</small></dd></div>
+      <div><dt>WELCOME10 orders</dt><dd>${int(welcome)} <small>${money(cur.discount)} discounted</small></dd></div>
+      <div><dt>Repeat orders</dt><dd>${pct(cur.repeat, 0)} <small>of orders</small></dd></div>`;
+    const rows = ltvRows();
+    const below = rows.filter(r => r.ratio < 3).map(r => r.name);
+    const s = `Blended LTV : CAC is ${cur.ltvCac.toFixed(1)} : 1 against a 3 : 1 target. Below target: ${below.join(', ') || 'none'}.`;
+    $('ltvSummary').textContent = s;
+    $('ltvChart').setAttribute('aria-label', 'Bar chart of LTV to CAC ratio by channel with a 3 to 1 target line. ' + rows.map(r => `${r.name} ${r.ratio.toFixed(1)}`).join(', ') + '.');
+  }
+  function ltvRows() {
+    const rows = channelRows().map(r => ({ name: r.c.name, short: r.c.short, ratio: r.ratio }));
+    rows.push({ name: 'All channels', short: 'All channels', ratio: cur.ltvCac });
+    return rows.sort((a, b) => b.ratio - a.ratio);
+  }
+
+  // ---------- charts ----------
+  const charts = {};
+  const hasChart = typeof window.Chart !== 'undefined';
+  if (!hasChart) document.querySelectorAll('[data-chart]').forEach(el => { el.classList.add('no-chart'); el.querySelectorAll('details.data').forEach(d => d.open = true); el.querySelectorAll('.legend').forEach(l => l.hidden = true); });
+  const valueLabels = {
+    id: 'valueLabels',
+    afterDatasetsDraw(chart, args, opts) {
+      if (!opts || !opts.format) return;
+      const { ctx } = chart, meta = chart.getDatasetMeta(0);
+      ctx.save(); ctx.font = `600 12px ${opts.font}`; ctx.fillStyle = opts.color; ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = opts.halo || 'transparent';
+      meta.data.forEach((bar, i) => { const v = chart.data.datasets[0].data[i], txt = opts.format(v, i); if (opts.halo) ctx.strokeText(txt, bar.x + 8, bar.y); ctx.fillText(txt, bar.x + 8, bar.y); });
+      ctx.restore();
+    }
+  };
+  const crosshair = {
+    id: 'crosshair',
+    afterDatasetsDraw(chart, args, opts) {
+      if (!opts || !opts.color) return;
+      const act = chart.tooltip && chart.tooltip.getActiveElements ? chart.tooltip.getActiveElements() : [];
+      if (!act.length) return;
+      const x = act[0].element.x, { top, bottom } = chart.chartArea, ctx = chart.ctx;
+      ctx.save(); ctx.strokeStyle = opts.color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, top); ctx.lineTo(Math.round(x) + 0.5, bottom); ctx.stroke(); ctx.restore();
+    }
+  };
+  const targetLine = {
+    id: 'targetLine',
+    afterDatasetsDraw(chart, args, opts) {
+      if (!opts || opts.value == null) return;
+      const x = chart.scales.x.getPixelForValue(opts.value), { top, bottom } = chart.chartArea, ctx = chart.ctx;
+      ctx.save(); ctx.strokeStyle = opts.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, top - 4); ctx.lineTo(x, bottom); ctx.stroke();
+      ctx.font = `600 11.5px ${opts.font}`; ctx.fillStyle = opts.textColor; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillText(opts.label, x + 5, top - 2); ctx.restore();
+    }
+  };
+  function baseOpts(t, animate) {
+    return {
+      responsive: true, maintainAspectRatio: false,
+      animation: animate && !reduceMotion ? { duration: 350 } : false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: t.tipBg, titleColor: t.tipInk, bodyColor: t.tipInk, borderWidth: 0, padding: 10, cornerRadius: 4,
+          titleFont: { family: t.sans, weight: '600', size: 12.5 }, bodyFont: { family: t.sans, size: 12.5 }, boxPadding: 4, usePointStyle: true
+        }
+      }
+    };
+  }
+  function axisX(t, extra) { return Object.assign({ grid: { display: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: t.sans, size: 11.5 }, maxRotation: 0, autoSkipPadding: 14 } }, extra || {}); }
+  function axisY(t, extra) { return Object.assign({ grid: { color: t.line, drawTicks: false }, border: { display: false }, ticks: { color: t.muted, font: { family: t.sans, size: 11.5 }, padding: 8 } }, extra || {}); }
+  function shortLabel(b) { const d = days[b.b - 1].date; return P === 30 ? dShort(d) : dShort(d); }
+
+  function renderCharts(animate) {
+    if (!hasChart) return;
+    const t = tok();
+    Chart.defaults.font.family = t.sans;
+    const narrow = ($('chanChart').parentElement.clientWidth || 600) < 520;
+    for (const k in charts) { charts[k].destroy(); delete charts[k]; }
+
+    // Revenue vs plan
+    {
+      const labels = trendBuckets.map(shortLabel);
+      const rev = trendBuckets.map(b => Math.round(b.revenue)), plan = trendBuckets.map(b => Math.round(b.target));
+      const o = baseOpts(t, animate);
+      o.interaction = { mode: 'index', intersect: false };
+      o.plugins.crosshair = { color: t.axis };
+      o.plugins.tooltip.callbacks = {
+        title: items => range(trendBuckets[items[0].dataIndex].a, trendBuckets[items[0].dataIndex].b),
+        label: c => ` ${c.dataset.label}: ${money(c.parsed.y)}`,
+        afterBody: items => { const b = trendBuckets[items[0].dataIndex]; return `vs plan: ${b.revenue >= b.target ? '+' : '−'}${pct(Math.abs(b.revenue / b.target - 1))}`; }
+      };
+      o.scales = { x: axisX(t, { ticks: Object.assign(axisX(t).ticks, { maxTicksLimit: P === 30 ? 8 : 7 }) }), y: axisY(t, { beginAtZero: true, ticks: Object.assign(axisY(t).ticks, { callback: v => compact(v), maxTicksLimit: 6 }) }) };
+      const lastIdx = rev.length - 1;
+      charts.trend = new Chart($('trendChart'), {
+        type: 'line', plugins: [crosshair],
+        data: { labels, datasets: [
+          { label: 'Net revenue', data: rev, borderColor: t.s1, backgroundColor: t.wash, fill: 'origin', borderWidth: 2, tension: 0.3, borderJoinStyle: 'round', borderCapStyle: 'round',
+            pointRadius: ctx => ctx.dataIndex === lastIdx ? 4.5 : 0, pointHoverRadius: 5, pointBackgroundColor: t.s1, pointBorderColor: t.surface, pointBorderWidth: 2, pointHitRadius: 12 },
+          { label: 'Plan', data: plan, borderColor: t.ink2, borderDash: [5, 4], borderWidth: 1.5, fill: false, pointRadius: 0, pointHoverRadius: 3, pointBackgroundColor: t.ink2, stepped: P === 30 ? 'middle' : false, tension: 0 }
+        ] },
+        options: o
+      });
+    }
+    // Category
+    {
+      const rows = CATS.map(c => ({ c, v: cur.cat[c] })).sort((a, b) => b.v - a.v);
+      const o = baseOpts(t, animate);
+      o.indexAxis = 'y';
+      o.layout = { padding: { right: 70 } };
+      o.plugins.valueLabels = { format: (v) => compact(v) + '  ' + pct(v / cur.revenue, 0), color: t.ink2, font: t.sans, halo: t.surface };
+      o.plugins.tooltip.callbacks = { label: c => ` ${money(c.parsed.x)} · ${pct(c.parsed.x / cur.revenue)} of revenue` };
+      o.scales = { y: Object.assign(axisX(t), { ticks: { color: t.ink2, font: { family: t.sans, size: 12.5 } } }), x: axisY(t, { beginAtZero: true, ticks: Object.assign(axisY(t).ticks, { callback: v => compact(v), maxTicksLimit: 5 }) }) };
+      charts.cat = new Chart($('catChart'), {
+        type: 'bar', plugins: [valueLabels],
+        data: { labels: rows.map(r => r.c), datasets: [{ label: 'Net revenue', data: rows.map(r => Math.round(r.v)), backgroundColor: t.s1, hoverBackgroundColor: t.s1, borderRadius: 4, borderSkipped: 'start', maxBarThickness: 22 }] },
+        options: o
+      });
+    }
+    // Channel revenue
+    {
+      const rows = channelRows();
+      const o = baseOpts(t, animate);
+      o.indexAxis = 'y';
+      o.layout = { padding: { right: 108 } };
+      o.plugins.valueLabels = { format: (v, i) => compact(v) + (narrow || rows[i].roas == null ? '' : '  ·  ' + rows[i].roas.toFixed(1) + '× ROAS'), color: t.ink2, font: t.sans, halo: t.surface };
+      if (narrow) o.layout.padding.right = 52;
+      o.plugins.tooltip.callbacks = { label: c => { const r = rows[c.dataIndex]; return [` Revenue ${money(r.rev)}`, ` Spend ${money(r.spend)}`, ` ROAS ${r.roas == null ? '—' : r.roas.toFixed(1) + '×'}`, ` CAC ${money(r.cac)}`]; } };
+      o.scales = { y: Object.assign(axisX(t), { ticks: { color: t.ink2, font: { family: t.sans, size: 12.5 } } }), x: axisY(t, { beginAtZero: true, ticks: Object.assign(axisY(t).ticks, { callback: v => compact(v), maxTicksLimit: 5 }) }) };
+      charts.chan = new Chart($('chanChart'), {
+        type: 'bar', plugins: [valueLabels],
+        data: { labels: rows.map(r => narrow ? r.c.short : r.c.name), datasets: [{ label: 'Revenue', data: rows.map(r => Math.round(r.rev)), backgroundColor: t.s1, hoverBackgroundColor: t.s1, borderRadius: 4, borderSkipped: 'start', maxBarThickness: 20 }] },
+        options: o
+      });
+    }
+    // Cash
+    {
+      const o = baseOpts(t, animate);
+      o.interaction = { mode: 'index', intersect: false };
+      o.plugins.tooltip.callbacks = {
+        title: items => range(cashBuckets[items[0].dataIndex].a, cashBuckets[items[0].dataIndex].b),
+        label: c => ` ${c.dataset.label}: ${money(c.parsed.y)}`,
+        afterBody: items => { const b = cashBuckets[items[0].dataIndex]; return b.po > 0 ? `Stock purchases: ${money(b.po)}` : ''; }
+      };
+      o.scales = { x: axisX(t, { ticks: Object.assign(axisX(t).ticks, { maxTicksLimit: 7 }) }), y: axisY(t, { grid: { color: c => c.tick && c.tick.value === 0 ? t.axis : t.line, drawTicks: false }, ticks: Object.assign(axisY(t).ticks, { callback: v => compact(v), maxTicksLimit: 6 }) }) };
+      charts.cash = new Chart($('cashChart'), {
+        data: { labels: cashBuckets.map(shortLabel), datasets: [
+          { type: 'bar', label: 'Cash in', data: cashBuckets.map(b => Math.round(b.cashIn)), backgroundColor: t.s2, hoverBackgroundColor: t.s2, borderRadius: 4, borderSkipped: 'start', maxBarThickness: 18, categoryPercentage: 0.7, barPercentage: 0.9, order: 2 },
+          { type: 'bar', label: 'Cash out', data: cashBuckets.map(b => -Math.round(b.cashOut)), backgroundColor: t.s3, hoverBackgroundColor: t.s3, borderRadius: 4, borderSkipped: 'start', maxBarThickness: 18, categoryPercentage: 0.7, barPercentage: 0.9, order: 2 },
+          { type: 'line', label: 'Net cash flow', data: cashBuckets.map(b => Math.round(b.cashNet)), borderColor: t.ink, backgroundColor: t.ink, borderWidth: 2, pointRadius: 3.5, pointBorderColor: t.surface, pointBorderWidth: 2, pointHoverRadius: 5, tension: 0.25, order: 1 }
+        ] },
+        options: o
+      });
+    }
+    // LTV:CAC
+    {
+      const rows = ltvRows();
+      const o = baseOpts(t, animate);
+      o.indexAxis = 'y';
+      o.layout = { padding: { right: 44, top: 18 } };
+      o.plugins.valueLabels = { format: v => v.toFixed(1) + '×', color: t.ink2, font: t.sans, halo: t.surface };
+      o.plugins.targetLine = { value: 3, color: t.ink, textColor: t.ink2, label: '3 : 1 target', font: t.sans };
+      o.plugins.tooltip.callbacks = { label: c => ` LTV : CAC ${c.parsed.x.toFixed(2)} : 1` };
+      o.scales = { y: Object.assign(axisX(t), { ticks: { color: t.ink2, font: { family: t.sans, size: 12 } } }), x: axisY(t, { beginAtZero: true, ticks: Object.assign(axisY(t).ticks, { callback: v => v + '×', maxTicksLimit: 6 }) }) };
+      charts.ltv = new Chart($('ltvChart'), {
+        type: 'bar', plugins: [valueLabels, targetLine],
+        data: { labels: rows.map(r => narrow ? r.short : r.name), datasets: [{ label: 'LTV : CAC', data: rows.map(r => +r.ratio.toFixed(2)), backgroundColor: t.s1, hoverBackgroundColor: t.s1, borderRadius: 4, borderSkipped: 'start', maxBarThickness: 16 }] },
+        options: o
+      });
+    }
+  }
+
+  // ---------- render ----------
+  function render(animate) {
+    cur = agg(N - P, N); prev = agg(N - 2 * P, N - P);
+    document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.period === P)));
+    $('compareNote').textContent = `Compared with the ${PREV_NAME[P]}`;
+    computeCash();
+    renderKpis(); renderHealth(); renderAttention();
+    renderTrendText(); renderGoal(); renderCatText(); renderChanText(); renderFunnel(); renderUnit();
+    renderFulfilment(); renderInventory(); renderCashText(); renderCustomers();
+    renderCharts(animate);
+  }
+  paintToggle();
+  render(false);
+  let rw = window.innerWidth, rt;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== rw) { rw = window.innerWidth; renderSparks(); renderCharts(false); } }, 120); });
+})();
+</script>
+<script>
+// Live strip: fills in only when served by the Worker (same-origin, behind admin login).
+(function () {
+  var aud = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' });
+  var money = function (c) { return aud.format((c || 0) / 100); };
+  function el(tag, text) { var e = document.createElement(tag); e.textContent = text; return e; }
+  function row(left, right) { var li = document.createElement('li'); li.append(el('span', left), el('span', right)); return li; }
+  fetch('/api/admin/summary', { credentials: 'same-origin' })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (d) {
+      var stats = [
+        ['Orders', String(d.orders)],
+        ['Revenue', money(d.revenue_cents)],
+        ['Average order', money(d.average_order_cents)],
+        ['Breakage cover uptake', Math.round(d.breakage_cover_attach_rate * 100) + '%'],
+        ['Newsletter list', d.subscribers.total + ' (+' + d.subscribers.last_30_days + ')']
+      ];
+      var dl = document.getElementById('liveStats');
+      stats.forEach(function (s) { var div = document.createElement('div'); div.append(el('dt', s[0]), el('dd', s[1])); dl.append(div); });
+      var low = document.getElementById('liveLow');
+      if (!d.low_stock.length) low.append(row('All products above reorder point', ''));
+      d.low_stock.forEach(function (p) { low.append(row(p.name, p.stock + ' left · reorder at ' + p.reorder_point)); });
+      var recent = document.getElementById('liveRecent');
+      if (!d.recent_orders.length) recent.append(row('No orders yet', ''));
+      d.recent_orders.slice(0, 5).forEach(function (o) { recent.append(row('#' + o.id + ' · ' + o.status, money(o.total_cents) + ' · ' + o.created_at.slice(0, 10))); });
+      document.getElementById('live').hidden = false;
+    })
+    .catch(function () { /* Not on the Worker (preview or file): keep the strip hidden. */ });
+})();
+</script>
+</body>
+</html>
