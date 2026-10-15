@@ -2,9 +2,9 @@
 <html lang="en-AU">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Try It in Your Room | Mirror House Melbourne</title>
-  <meta name="description" content="See a Mirror House mirror in your own room. Load a photo, mark the back wall and place a real-size mirror with a live reflection. Your photo stays on your device.">
+  <meta name="description" content="See a Mirror House mirror in your own room. Snap a photo, tap the corners and place a real-size mirror with a live reflection. Your photo stays on your device.">
   <meta name="robots" content="index, follow">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Try It in Your Room | Mirror House Melbourne">
@@ -15,213 +15,292 @@
   <link rel="stylesheet" href="/css/theme.css">
 
   <style>
+    :root { --hdr: 77px; }
     .visually-hidden {
       position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
       overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
     }
     .announcement-divider { opacity: 0.6; }
 
-    /* ---------- intro ---------- */
-    .viz-intro { padding-block: 26px 20px; display: grid; gap: 10px; justify-items: start; }
-    .viz-title {
-      font-family: var(--font-serif); font-weight: 500; margin: 0;
-      font-size: clamp(2rem, 3.8vw, 2.9rem); line-height: 1.04; letter-spacing: -0.01em;
+    /* ---------- page frame ---------- */
+    .viz-intro { padding-block: 22px 4px; }
+    .viz-title { font-family: var(--font-serif); font-weight: 500; margin: 6px 0 0; font-size: clamp(1.9rem, 3.2vw, 2.6rem); line-height: 1.05; }
+    .viz-app {
+      display: grid; grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+      grid-template-areas: "card stage"; gap: 24px; align-items: start;
+      padding-block: 18px clamp(40px, 6vw, 72px);
     }
-    .viz-lede { margin: 0; color: var(--ink-2); max-width: 62ch; font-size: 0.98rem; }
+    .viz-stage { grid-area: stage; min-width: 0; position: sticky; top: calc(var(--hdr) + 14px); }
+    .viz-viewport {
+      position: relative; overflow: hidden; border-radius: 14px; background: var(--espresso); color: var(--on-dark);
+      height: max(70vh, min(calc(100vh - var(--hdr) - 40px), 880px)); min-height: 440px;
+    }
+    .viz-viewport > canvas { display: block; width: 100%; height: 100%; outline: none; }
+    .viz-viewport.is-dragging > canvas { cursor: grabbing; }
 
-    /* ---------- layout ---------- */
-    .viz-layout {
-      display: grid; grid-template-columns: minmax(300px, 370px) minmax(0, 1fr);
-      gap: 24px; align-items: start; padding-bottom: clamp(48px, 7vw, 88px);
+    /* ---------- step card ---------- */
+    .step-card {
+      grid-area: card; position: sticky; top: calc(var(--hdr) + 14px);
+      background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+      padding: 18px 20px 22px; display: grid; gap: 14px; min-width: 0;
     }
-    .viz-panel { padding: 0; gap: 0; }
-    .viz-step { padding: 20px 22px; display: grid; gap: 12px; border-top: 1px solid var(--line); min-width: 0; }
-    .viz-step:first-child { border-top: 0; }
-    .step-head {
-      margin: 0; display: flex; align-items: center; gap: 12px;
-      font-family: var(--font-serif); font-weight: 500; font-size: 1.42rem; line-height: 1.1;
+    .step-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px 0 12px;
+      border: 1px solid var(--line); border-radius: 999px; background: var(--bg); cursor: pointer;
+      font-size: 0.95rem; font-weight: 500; color: var(--ink);
     }
-    .step-num {
-      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
-      font-family: var(--font-sans); font-size: 0.78rem; font-weight: 600; letter-spacing: 0;
-      background: var(--ink); color: var(--on-dark);
-    }
-    .viz-step[data-done="true"] .step-num { background: var(--brass-deep); }
-    .step-copy { margin: 0; font-size: 0.88rem; color: var(--muted); line-height: 1.5; }
+    .back-btn:hover { border-color: var(--ink-2); }
+    .back-btn[hidden] { display: inline-flex; visibility: hidden; }
+    .step-dots { display: flex; gap: 8px; list-style: none; margin: 0; padding: 0; }
+    .step-dots li { width: 10px; height: 10px; border-radius: 999px; background: var(--line); transition: width 0.25s var(--ease), background 0.25s; }
+    .step-dots li.done { background: var(--brass); }
+    .step-dots li[aria-current="step"] { width: 28px; background: var(--ink); }
 
-    .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .viz-page .filter-pill { min-height: 44px; padding-inline: 16px; }
+    .step { display: grid; gap: 14px; min-width: 0; }
+    .step[hidden] { display: none; }
+    .step-title { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 1.85rem; line-height: 1.05; outline: none; }
+    .step-line { margin: -6px 0 0; color: var(--ink-2); font-size: 1rem; line-height: 1.4; }
 
-    .drop-zone {
-      position: relative; display: grid; gap: 2px; justify-items: center; text-align: center;
-      padding: 16px 14px; border: 1px dashed #B8AC9C; border-radius: var(--radius);
-      background: var(--bg); cursor: pointer; transition: border-color 0.2s, background 0.2s;
+    .big-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .big-btn {
+      position: relative; display: grid; justify-items: center; align-content: center; gap: 8px;
+      min-height: 120px; padding: 14px 8px; border-radius: 16px; cursor: pointer; text-align: center;
+      background: var(--ink); color: var(--on-dark); font-size: 1.05rem; font-weight: 500; line-height: 1.2;
+      border: 2px solid var(--ink); transition: background 0.2s, transform 0.15s var(--ease);
     }
-    .drop-zone:hover, .drop-zone.is-over { border-color: var(--brass); background: color-mix(in srgb, var(--brass) 7%, var(--bg)); }
-    .drop-zone:focus-within { outline: 2px solid var(--brass); outline-offset: 3px; }
-    .drop-zone strong { font-weight: 500; font-size: 0.92rem; }
-    .drop-zone small { color: var(--muted); font-size: 0.78rem; line-height: 1.45; }
-    .drop-zone input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
-    .viz-msg { margin: 0; font-size: 0.84rem; line-height: 1.45; color: var(--ink-2); }
+    .big-btn:hover { background: var(--brass-deep); border-color: var(--brass-deep); }
+    .big-btn:active { transform: scale(0.98); }
+    .big-btn.light { background: var(--bg); color: var(--ink); }
+    .big-btn.light:hover { background: var(--sand); }
+    .big-btn svg { width: 38px; height: 38px; }
+    .big-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .big-btn:focus-within { outline: 3px solid var(--brass); outline-offset: 3px; }
+    .big-btn.is-over { outline: 3px dashed var(--brass); outline-offset: 3px; }
+
+    .sub-label { margin: 2px 0 -6px; font-size: 0.82rem; color: var(--muted); letter-spacing: 0.04em; }
+    .sample-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sample-thumb {
+      display: grid; gap: 6px; padding: 6px; border: 2px solid var(--line); border-radius: 14px;
+      background: var(--bg); cursor: pointer; text-align: center; font-size: 0.92rem; font-weight: 500; color: var(--ink);
+    }
+    .sample-thumb img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 9px; background: var(--sand); }
+    .sample-thumb:hover { border-color: var(--brass); }
+    .sample-thumb[aria-pressed="true"] { border-color: var(--brass); background: color-mix(in srgb, var(--brass) 8%, var(--bg)); }
+
+    .viz-msg { margin: 0; font-size: 0.92rem; line-height: 1.4; color: var(--ink-2); }
     .viz-msg:empty { display: none; }
     .viz-msg.error { color: #9A2E22; }
 
-    .slider-field { display: grid; gap: 2px; }
-    .slider-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-    .slider-top label { font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-    .slider-top output { font-variant-numeric: tabular-nums; font-size: 0.88rem; font-weight: 500; }
-    .slider-field input[type="range"] { width: 100%; height: 32px; margin: 0; accent-color: var(--brass-deep); }
-    .slider-field small { color: var(--muted); font-size: 0.76rem; line-height: 1.4; }
-    .room-size {
-      margin: 0; padding: 10px 12px; background: var(--sand); border-radius: var(--radius);
-      font-size: 0.86rem; font-variant-numeric: tabular-nums; color: var(--ink-2);
+    .chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .chip-label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.92rem; color: var(--ink-2); margin-right: 2px; }
+    .chip-label svg { width: 20px; height: 20px; }
+    .chip {
+      min-height: 48px; min-width: 64px; padding: 0 16px; border-radius: 999px; cursor: pointer;
+      border: 2px solid var(--line); background: var(--bg); color: var(--ink); font-size: 0.95rem; font-weight: 500;
     }
-    .room-size strong { color: var(--ink); font-weight: 500; }
+    .chip:hover { border-color: var(--ink-2); }
+    .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-dark); }
+    .room-line { margin: 0; font-size: 0.95rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .room-line strong { color: var(--ink); font-weight: 600; }
 
-    .mirror-list { display: grid; gap: 8px; }
+    .small-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .small-btn {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px;
+      border: 1px solid var(--line); border-radius: 999px; background: var(--bg); cursor: pointer;
+      font-size: 0.88rem; color: var(--ink-2);
+    }
+    .small-btn svg { width: 18px; height: 18px; }
+    .small-btn:hover { border-color: var(--ink-2); color: var(--ink); }
+    .small-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-big {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+      min-height: 58px; padding: 0 20px; border-radius: 16px; cursor: pointer;
+      font-size: 1.08rem; font-weight: 600; letter-spacing: 0.01em; border: 2px solid var(--ink);
+      background: var(--ink); color: var(--on-dark); transition: background 0.2s, transform 0.15s var(--ease);
+    }
+    .btn-big svg { width: 22px; height: 22px; }
+    .btn-big:hover { background: var(--brass-deep); border-color: var(--brass-deep); }
+    .btn-big:active { transform: scale(0.99); }
+    .btn-big.secondary { background: transparent; color: var(--ink); }
+    .btn-big.secondary:hover { background: var(--sand); border-color: var(--ink); }
+    .btn-big[disabled] { opacity: 0.45; cursor: not-allowed; background: var(--muted); border-color: var(--muted); }
+
+    .more { border-top: 1px solid var(--line); padding-top: 6px; }
+    .more summary {
+      display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; list-style: none;
+      font-size: 0.86rem; color: var(--muted); text-decoration: underline; text-underline-offset: 3px;
+    }
+    .more summary::-webkit-details-marker { display: none; }
+    .more-body { display: grid; gap: 14px; padding: 8px 0 4px; }
+    .field-row { display: grid; gap: 4px; }
+    .field-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 0.86rem; color: var(--ink-2); }
+    .field-top output { font-variant-numeric: tabular-nums; font-weight: 500; color: var(--ink); }
+    .field-row input[type="range"] { width: 100%; height: 32px; margin: 0; accent-color: var(--brass-deep); }
+    .check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 0.9rem; color: var(--ink-2); cursor: pointer; }
+    .check input { width: 20px; height: 20px; accent-color: var(--brass-deep); }
+    .more .chip { min-height: 44px; font-size: 0.86rem; }
+
+    /* mirror cards */
+    .mirror-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .mirror-card {
-      display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 12px; align-items: center;
-      width: 100%; padding: 8px; text-align: left; cursor: pointer;
-      background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
-      transition: border-color 0.2s, background 0.2s;
+      position: relative; display: grid; gap: 6px; align-content: start; padding: 6px 6px 10px; text-align: left; cursor: pointer;
+      background: var(--bg); border: 2px solid var(--line); border-radius: 14px; min-width: 0; color: var(--ink);
     }
     .mirror-card:hover { border-color: #C9BBA7; }
-    .mirror-card[aria-checked="true"] {
-      border-color: var(--brass); box-shadow: inset 0 0 0 1px var(--brass);
-      background: color-mix(in srgb, var(--brass) 7%, var(--bg));
+    .mirror-card[aria-checked="true"] { border-color: var(--brass); background: color-mix(in srgb, var(--brass) 9%, var(--bg)); }
+    .mirror-card[aria-checked="true"]::after {
+      content: ""; position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 50%;
+      background: var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F3ECE2' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center / 16px no-repeat;
     }
-    .mirror-thumb {
-      width: 60px; height: 75px; border-radius: 2px; overflow: hidden; background: var(--sand);
-      display: grid; place-items: center;
-    }
-    .mirror-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .mirror-thumb svg { width: 70%; height: 80%; }
-    .mirror-text { display: grid; gap: 2px; min-width: 0; }
-    .mirror-name { font-family: var(--font-serif); font-size: 1.08rem; line-height: 1.15; }
-    .mirror-meta { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-    .mirror-meta .price { color: var(--ink); font-weight: 500; }
-    .soon-tag {
-      justify-self: start; font-size: 0.64rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
-      color: var(--brass-deep); background: color-mix(in srgb, var(--brass) 12%, transparent);
-      padding: 2px 8px; border-radius: 999px;
-    }
+    .mirror-pic { aspect-ratio: 4 / 5; border-radius: 10px; overflow: hidden; background: var(--sand); display: grid; place-items: center; }
+    .mirror-pic img { width: 100%; height: 100%; object-fit: cover; }
+    .mirror-pic svg { width: 64%; height: 76%; }
+    .mirror-name { font-family: var(--font-serif); font-size: 1.12rem; line-height: 1.1; padding-inline: 4px; }
+    .mirror-meta { display: flex; justify-content: space-between; gap: 6px; padding-inline: 4px; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+    .mirror-meta .price { font-weight: 600; }
+    .soon { color: var(--brass-deep); font-weight: 500; }
 
-    .option-group { display: grid; gap: 6px; border: 0; padding: 0; margin: 0; min-width: 0; }
-    .option-group legend, .option-label { padding: 0; margin-bottom: 6px; font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-    .selected-line {
-      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px;
-      padding-top: 12px; border-top: 1px solid var(--line);
-    }
-    .selected-line strong { font-family: var(--font-serif); font-weight: 500; font-size: 1.2rem; line-height: 1.15; }
-    .dims { font-variant-numeric: tabular-nums; font-size: 0.86rem; color: var(--ink-2); }
-    #add-to-bag-btn { width: 100%; }
+    .chosen { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: center; }
+    .chosen .mirror-pic { width: 64px; }
+    .chosen-name { font-family: var(--font-serif); font-size: 1.3rem; line-height: 1.1; }
+    .chosen-meta { font-size: 0.92rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 
-    /* ---------- 3D stage ---------- */
-    .viz-stage { position: sticky; top: 92px; min-width: 0; }
-    .viz-viewport {
-      position: relative; overflow: hidden; border-radius: var(--radius); scroll-margin-top: 110px;
-      height: max(70vh, min(calc(100vh - 130px), 860px)); min-height: 420px;
-      background: var(--espresso); color: var(--on-dark);
+    .switch {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%;
+      min-height: 58px; padding: 0 16px; border-radius: 16px; border: 2px solid var(--line); background: var(--bg);
+      cursor: pointer; font-size: 1rem; font-weight: 500; color: var(--ink); text-align: left;
     }
-    .viz-viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
-    .viz-viewport.is-dragging canvas { cursor: grabbing; }
+    .switch-track { flex-shrink: 0; width: 52px; height: 30px; border-radius: 999px; background: var(--line); position: relative; transition: background 0.2s; }
+    .switch-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform 0.2s var(--ease); }
+    .switch[aria-checked="true"] .switch-track { background: var(--brass-deep); }
+    .switch[aria-checked="true"] .switch-track::after { transform: translateX(22px); }
+    .switch[hidden] { display: none; }
+
+    .tip-row { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 0.9rem; color: var(--ink-2); margin: -4px 0 0; }
+    .tip-row span { display: inline-flex; align-items: center; gap: 6px; }
+    .tip-row svg { width: 22px; height: 22px; color: var(--brass-deep); }
+
+    /* ---------- 3D overlays ---------- */
     .viz-toolbar { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 3; }
-    .chip-btn {
-      display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px;
-      border: 0; border-radius: 999px; cursor: pointer;
-      background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--ink);
-      font-size: 0.74rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
-      box-shadow: 0 2px 10px rgba(29, 26, 23, 0.18);
+    .icon-chip {
+      display: inline-flex; align-items: center; gap: 8px; min-height: 48px; min-width: 48px; padding: 0 16px;
+      border: 0; border-radius: 999px; cursor: pointer; justify-content: center;
+      background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--ink);
+      font-size: 0.9rem; font-weight: 500; box-shadow: 0 2px 10px rgba(29, 26, 23, 0.2);
     }
-    .chip-btn:hover { background: var(--surface); }
-    .chip-btn.strong { background: #E3C98F; color: var(--ink); }
-    .chip-btn.strong:hover { background: var(--on-dark); }
-    .viz-hint {
-      position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 2;
-      width: max-content; max-width: calc(100% - 24px); text-align: center; pointer-events: none;
-      background: rgba(29, 26, 23, 0.66); color: var(--on-dark);
-      font-size: 0.78rem; line-height: 1.35; padding: 7px 14px; border-radius: 999px;
+    .icon-chip svg { width: 20px; height: 20px; }
+    .icon-chip:hover { background: var(--surface); }
+    .icon-chip[hidden] { display: none; }
+    .coach {
+      position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 4;
+      display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100% - 24px);
+      padding: 10px 10px 10px 16px; border-radius: 18px; background: rgba(29, 26, 23, 0.86); color: var(--on-dark);
+      font-size: 0.95rem; line-height: 1.3;
+    }
+    .coach[hidden] { display: none; }
+    .coach svg { flex-shrink: 0; width: 34px; height: 34px; color: #E3C98F; }
+    .coach button {
+      flex-shrink: 0; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 0; cursor: pointer;
+      background: #E3C98F; color: var(--ink); font-weight: 600; font-size: 0.92rem;
     }
     .viz-cover {
-      position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; text-align: center;
+      position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; text-align: center;
       padding: 24px; background: var(--espresso); color: var(--on-dark);
     }
     .viz-cover[hidden] { display: none; }
-    .viz-cover p { margin: 0 auto; max-width: 44ch; font-size: 0.95rem; color: var(--on-dark); }
+    .viz-cover p { margin: 0 auto; max-width: 40ch; font-size: 0.98rem; }
     .viz-cover .cover-title { font-family: var(--font-serif); font-size: 1.6rem; margin-bottom: 8px; }
 
-    /* ---------- 2D wall editor ---------- */
-    .wall-editor { position: absolute; inset: 0; z-index: 4; background: #191613; }
+    /* ---------- corner editor ---------- */
+    .wall-editor { position: absolute; inset: 0; z-index: 5; background: #191613; overflow: hidden; touch-action: none; }
     .wall-editor[hidden] { display: none; }
-    .editor-bar {
-      position: absolute; top: 0; left: 0; right: 0; z-index: 3;
-      display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap;
-      padding: 10px 12px; color: var(--on-dark); font-size: 0.84rem;
+    .wall-editor canvas.photo { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .wall-editor svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+    .overlay .wall-fill { stroke: none; }
+    .overlay .floor-line { fill: none; stroke: #E3C98F; stroke-width: 3; stroke-linejoin: round; }
+    .overlay .ceil-line { fill: none; stroke: #FFFDF9; stroke-width: 2; stroke-linejoin: round; stroke-dasharray: 7 5; }
+    .overlay .post-line { stroke: rgba(255, 253, 249, 0.85); stroke-width: 2; }
+    .overlay .eye-line { stroke: rgba(255, 253, 249, 0.6); stroke-width: 1.2; stroke-dasharray: 3 5; }
+    .overlay .wall-num { fill: rgba(29, 26, 23, 0.55); }
+    .overlay .wall-num-text { fill: #FFFDF9; font: 600 13px var(--font-sans); text-anchor: middle; dominant-baseline: central; }
+    .dot {
+      position: absolute; width: 52px; height: 52px; margin: -26px 0 0 -26px; padding: 0; border: 0; background: transparent;
+      cursor: grab; touch-action: none; z-index: 2;
     }
-    .editor-bar strong { font-weight: 500; letter-spacing: 0.04em; }
-    .editor-frame { position: absolute; }
-    .editor-frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .editor-guides { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-    .editor-guides line { stroke: rgba(243, 236, 226, 0.75); stroke-width: 1.2; stroke-dasharray: 5 4; }
-    .wall-rect {
-      position: absolute; cursor: move; touch-action: none;
-      outline: 2px solid #E3C98F; box-shadow: 0 0 0 4000px rgba(20, 17, 14, 0.38);
+    .dot::after {
+      content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%);
+      border-radius: 50%; background: #E3C98F; border: 3px solid #FFFDF9; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+      transition: transform 0.15s var(--ease);
     }
-    .handle {
-      position: absolute; z-index: 2; width: 44px; height: 44px; padding: 0; margin: 0;
-      border: 0; background: transparent; touch-action: none;
+    .dot.ceil::after { background: #FFFDF9; border-color: #E3C98F; }
+    .dot.active::after { transform: translate(-50%, -50%) scale(1.25); }
+    .dot.warn::after { border-color: #E2553F; box-shadow: 0 0 0 5px rgba(226, 85, 63, 0.4), 0 1px 6px rgba(0, 0, 0, 0.55); }
+    .dot:focus-visible { outline: none; }
+    .dot:focus-visible::after { box-shadow: 0 0 0 4px #E3C98F, 0 1px 6px rgba(0, 0, 0, 0.55); }
+    .eye-dot { width: auto; height: 44px; margin: -22px 0 0 0; padding: 0 12px; display: flex; align-items: center; transform: translateX(-50%); }
+    .eye-dot::after { display: none; }
+    .eye-dot span { background: #FFFDF9; color: var(--ink); border-radius: 999px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; border: 2px solid #E3C98F; }
+    .nudge {
+      position: absolute; z-index: 3; transform: translate(-50%, -100%); margin-top: -26px; pointer-events: none;
+      background: #FFFDF9; color: var(--ink); font-size: 0.86rem; font-weight: 600; white-space: nowrap;
+      padding: 8px 12px; border-radius: 12px; border: 2px solid #E2553F; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
     }
-    .handle::after {
-      content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-      width: 18px; height: 18px; border-radius: 50%; background: #FFFDF9; border: 2px solid var(--brass);
-      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+    .nudge.below { transform: translate(-50%, 0); margin-top: 26px; }
+    .loupe {
+      position: absolute; z-index: 4; width: 112px; height: 112px; border-radius: 50%; pointer-events: none;
+      border: 3px solid #FFFDF9; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); background: #191613;
     }
-    .handle:focus-visible { outline: none; }
-    .handle:focus-visible::after { box-shadow: 0 0 0 3px #E3C98F, 0 1px 5px rgba(0, 0, 0, 0.45); }
-    .handle[data-h="tl"] { left: -22px; top: -22px; cursor: nwse-resize; }
-    .handle[data-h="tr"] { right: -22px; top: -22px; cursor: nesw-resize; }
-    .handle[data-h="bl"] { left: -22px; bottom: -22px; cursor: nesw-resize; }
-    .handle[data-h="br"] { right: -22px; bottom: -22px; cursor: nwse-resize; }
-    .handle.edge { z-index: 1; }
-    .handle.edge::after { border-radius: 3px; }
-    .handle[data-h="t"], .handle[data-h="b"] { left: 22px; width: calc(100% - 44px); cursor: ns-resize; }
-    .handle[data-h="t"] { top: -22px; }
-    .handle[data-h="b"] { bottom: -22px; }
-    .handle[data-h="t"]::after, .handle[data-h="b"]::after { width: 30px; height: 8px; }
-    .handle[data-h="l"], .handle[data-h="r"] { top: 22px; height: calc(100% - 44px); cursor: ew-resize; }
-    .handle[data-h="l"] { left: -22px; }
-    .handle[data-h="r"] { right: -22px; }
-    .handle[data-h="l"]::after, .handle[data-h="r"]::after { width: 8px; height: 30px; }
-    .horizon-line { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed rgba(255, 253, 249, 0.9); z-index: 2; }
-    .horizon-handle {
-      position: absolute; left: 50%; transform: translateX(-50%); top: -22px; height: 44px; padding: 0 4px; border: 0; background: transparent;
-      cursor: ns-resize; touch-action: none; display: flex; align-items: center;
+    .loupe[hidden] { display: none; }
+    .hand-hint { position: absolute; z-index: 3; width: 46px; height: 46px; margin: 4px 0 0 2px; pointer-events: none; color: #FFFDF9; filter: drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
+    .hand-hint[hidden] { display: none; }
+    .hand-hint svg { width: 100%; height: 100%; animation: hand-drag 1.8s var(--ease) infinite; }
+    @keyframes hand-drag {
+      0%, 15% { transform: translate(0, 0); opacity: 1; }
+      60%, 75% { transform: translate(-18px, 22px); opacity: 1; }
+      100% { transform: translate(0, 0); opacity: 0.9; }
     }
-    .horizon-handle span {
-      background: #FFFDF9; color: var(--ink); border: 2px solid var(--brass); border-radius: 999px;
-      font-size: 0.7rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 10px;
-      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4); white-space: nowrap;
-    }
-    .horizon-handle:focus-visible { outline: none; }
-    .horizon-handle:focus-visible span { box-shadow: 0 0 0 3px #E3C98F; }
-    .editor-readout {
-      position: absolute; left: 12px; bottom: 12px; z-index: 3; max-width: calc(100% - 24px);
-      background: rgba(29, 26, 23, 0.72); color: var(--on-dark); font-size: 0.78rem; font-variant-numeric: tabular-nums;
-      padding: 6px 12px; border-radius: 999px;
-    }
+    .editor-tools { position: absolute; top: 12px; right: 12px; z-index: 4; display: flex; gap: 8px; }
 
     .viz-footer { background: var(--espresso); color: var(--on-dark-muted); padding-block: 28px; font-size: 0.82rem; }
     .viz-footer .container { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; }
     .viz-footer a { color: var(--on-dark); }
 
+    /* ---------- phone: 3D first, steps in a bottom sheet ---------- */
     @media (max-width: 900px) {
-      .viz-layout { grid-template-columns: minmax(0, 1fr); }
-      .viz-stage { position: static; }
-      .viz-viewport { height: 60vh; min-height: 360px; }
+      .announcement-bar, .viz-intro, .viz-footer, .site-nav, .brand-subtitle { display: none; }
+      .site-header .header-inner { padding-block: 6px; flex-wrap: nowrap; }
+      .brand-title { font-size: 1.15rem; letter-spacing: 0.2em; }
+      .viz-app {
+        display: flex; flex-direction: column; gap: 0; padding: 0; max-width: none;
+        height: calc(100vh - var(--hdr)); height: calc(100dvh - var(--hdr));
+      }
+      .viz-stage { flex: 1 1 auto; min-height: 0; position: relative; top: auto; }
+      .viz-viewport { height: 100%; min-height: 0; border-radius: 0; }
+      .step-card {
+        position: relative; top: auto; flex: 0 0 auto; max-height: 64%; overflow-y: auto; overscroll-behavior: contain;
+        margin-top: -16px; z-index: 6; border-radius: 20px 20px 0 0; border-width: 1px 0 0;
+        padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px)); gap: 12px;
+        box-shadow: 0 -10px 28px rgba(29, 26, 23, 0.16);
+      }
+      .step-title { font-size: 1.6rem; }
+      .big-btn { min-height: 104px; }
+      .sample-thumb img { aspect-ratio: 16 / 9; }
+      .mirror-cards {
+        grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 40%;
+        overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; margin-inline: -16px; padding-inline: 16px;
+        scrollbar-width: none;
+      }
+      .mirror-cards::-webkit-scrollbar { display: none; }
+      .mirror-card { scroll-snap-align: start; }
+      .mirror-pic { aspect-ratio: 1 / 1; }
     }
-    @media (max-width: 520px) {
-      .viz-step { padding: 18px 16px; }
-      .viz-intro { padding-block: 20px 16px; }
+    @media (max-width: 380px) {
+      .big-btn { min-height: 96px; font-size: 1rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hand-hint svg { animation: none; }
     }
   </style>
 
@@ -243,7 +322,7 @@
     <span>Use code <strong>WELCOME10</strong> for 10% off your first order</span>
   </aside>
 
-  <header class="site-header">
+  <header class="site-header" id="site-header">
     <div class="container header-inner">
       <div class="brand-logo">
         <a href="/" class="brand-title">MIRROR HOUSE</a>
@@ -276,107 +355,40 @@
   <main id="main">
     <div class="container viz-intro">
       <span class="hero-tag">Try it in your room</span>
-      <h1 class="viz-title">See the mirror on your wall first</h1>
-      <p class="viz-lede">Use a sample room or a photo of your own, mark the wall you're facing, then place a mirror at its real size. The reflection is live, so you can look around and see what it picks up. Your photo stays on your device.</p>
+      <h1 class="viz-title">See the mirror on your wall</h1>
     </div>
 
-    <div class="container viz-layout">
-      <!-- Controls -->
-      <div class="panel viz-panel">
-        <section class="viz-step" id="step-room" aria-labelledby="step-room-title" data-done="true">
-          <h2 class="step-head" id="step-room-title"><span class="step-num" aria-hidden="true">1</span>Choose a room</h2>
-          <div class="pill-row" role="group" aria-label="Sample rooms">
-            <button type="button" class="filter-pill" id="sample-living" data-sample="living" aria-pressed="true">Living room sample</button>
-            <button type="button" class="filter-pill" id="sample-bedroom" data-sample="bedroom" aria-pressed="false">Bedroom sample</button>
-          </div>
-          <label class="drop-zone" id="drop-zone" for="photo-input">
-            <input type="file" id="photo-input" accept="image/*,.heic,.heif">
-            <strong>Upload your photo</strong>
-            <small>Drop it here or tap to browse. Stand back and shoot straight at the wall, with some floor in view.</small>
-          </label>
-          <p class="viz-msg" id="photo-msg" role="status" aria-live="polite"></p>
-        </section>
-
-        <section class="viz-step" id="step-wall" aria-labelledby="step-wall-title" data-done="true">
-          <h2 class="step-head" id="step-wall-title"><span class="step-num" aria-hidden="true">2</span>Mark the back wall</h2>
-          <p class="step-copy">Drag the frame onto the four corners of the wall you're facing. Set the dashed line to eye level, where the floor and ceiling lines would meet.</p>
-          <button type="button" class="btn btn-secondary" id="edit-wall-btn" aria-controls="wall-editor" aria-expanded="false">Mark the wall</button>
-          <div class="slider-field">
-            <div class="slider-top"><label for="lens-input">Lens</label><output id="lens-value" for="lens-input">66°</output></div>
-            <input type="range" id="lens-input" min="45" max="90" step="1" value="66">
-            <small>Phone main camera is about 66°. Go higher for ultra-wide shots.</small>
-          </div>
-          <div class="slider-field">
-            <div class="slider-top"><label for="height-input">Camera height</label><output id="height-value" for="height-input">1.50 m</output></div>
-            <input type="range" id="height-input" min="1.2" max="1.8" step="0.05" value="1.5">
-            <small>How high the camera was off the floor. This sets the room's scale.</small>
-          </div>
-          <p class="room-size" id="room-size" aria-live="polite">Room size: measuring…</p>
-        </section>
-
-        <section class="viz-step" id="step-mirror" aria-labelledby="step-mirror-title" data-done="true">
-          <h2 class="step-head" id="step-mirror-title"><span class="step-num" aria-hidden="true">3</span>Choose a mirror</h2>
-          <div class="mirror-list" id="mirror-list" role="radiogroup" aria-labelledby="step-mirror-title"></div>
-
-          <fieldset class="option-group" id="wall-group">
-            <legend>Wall</legend>
-            <div class="pill-row">
-              <button type="button" class="filter-pill" id="wall-back" data-wall="back" aria-pressed="true">Back</button>
-              <button type="button" class="filter-pill" id="wall-left" data-wall="left" aria-pressed="false">Left</button>
-              <button type="button" class="filter-pill" id="wall-right" data-wall="right" aria-pressed="false">Right</button>
-            </div>
-          </fieldset>
-
-          <fieldset class="option-group" id="mount-group">
-            <legend>Placement</legend>
-            <div class="pill-row">
-              <button type="button" class="filter-pill" id="mount-lean" data-mount="lean" aria-pressed="true">Lean on floor</button>
-              <button type="button" class="filter-pill" id="mount-hang" data-mount="hang" aria-pressed="false">Hang on wall</button>
-            </div>
-          </fieldset>
-
-          <div class="selected-line">
-            <strong id="mirror-selected-name">Grand Royale Arch</strong>
-            <span class="dims" id="mirror-dims" aria-live="polite">75 × 195 cm</span>
-          </div>
-          <button type="button" class="btn btn-primary" id="add-to-bag-btn" data-add="grand-royale-arched-brass-floor-mirror">Add to bag · $1,290</button>
-        </section>
-      </div>
-
-      <!-- 3D view -->
-      <section class="viz-stage" aria-label="3D room preview">
+    <div class="container viz-app">
+      <!-- Stage: 3D room, or the corner editor in step 2 -->
+      <section class="viz-stage" aria-label="Room preview">
         <div class="viz-viewport" id="viewport">
           <div class="viz-toolbar">
-            <button type="button" class="chip-btn" id="reset-view-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-              Reset view
+            <button type="button" class="icon-chip" id="reset-view-btn" aria-label="Reset view">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+              <span>Reset</span>
             </button>
           </div>
-          <p class="viz-hint" id="viz-hint">Drag the mirror to move it · drag the room to look around</p>
+
+          <div class="coach" id="coach" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M12 9.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 10.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-4.7-2.3L4 15.5a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
+            <span>Drag the mirror to move it.<br>Drag the room to look around.</span>
+            <button type="button" id="coach-ok">Got it</button>
+          </div>
 
           <div class="wall-editor" id="wall-editor" hidden>
-            <div class="editor-bar" id="editor-bar">
-              <strong>Mark the back wall</strong>
-              <button type="button" class="chip-btn strong" id="wall-done-btn">Done</button>
+            <canvas class="photo" id="editor-canvas" aria-hidden="true"></canvas>
+            <svg class="overlay" id="editor-svg" aria-hidden="true"></svg>
+            <div id="editor-dots"></div>
+            <div id="editor-nudges"></div>
+            <div class="hand-hint" id="hand-hint" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M12 9.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 10.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-4.7-2.3L4 15.5a1.6 1.6 0 0 1 2.4-2.1L9 15" fill="rgba(29,26,23,.55)"/></svg>
             </div>
-            <div class="editor-frame" id="editor-frame">
-              <canvas id="editor-canvas" aria-hidden="true"></canvas>
-              <svg class="editor-guides" id="editor-guides" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
-              <div class="horizon-line" id="horizon-line">
-                <button type="button" class="horizon-handle" id="handle-horizon" data-h="hz" aria-label="Eye level line. Use up and down arrow keys to move."><span>Eye level</span></button>
-              </div>
-              <div class="wall-rect" id="wall-rect" data-h="move">
-                <button type="button" class="handle edge" id="handle-t" data-h="t" aria-label="Top edge of back wall (ceiling line). Arrow keys move it."></button>
-                <button type="button" class="handle edge" id="handle-b" data-h="b" aria-label="Bottom edge of back wall (floor line). Arrow keys move it."></button>
-                <button type="button" class="handle edge" id="handle-l" data-h="l" aria-label="Left edge of back wall. Arrow keys move it."></button>
-                <button type="button" class="handle edge" id="handle-r" data-h="r" aria-label="Right edge of back wall. Arrow keys move it."></button>
-                <button type="button" class="handle" id="handle-tl" data-h="tl" aria-label="Top-left corner of back wall. Arrow keys move it."></button>
-                <button type="button" class="handle" id="handle-tr" data-h="tr" aria-label="Top-right corner of back wall. Arrow keys move it."></button>
-                <button type="button" class="handle" id="handle-bl" data-h="bl" aria-label="Bottom-left corner of back wall. Arrow keys move it."></button>
-                <button type="button" class="handle" id="handle-br" data-h="br" aria-label="Bottom-right corner of back wall. Arrow keys move it."></button>
-              </div>
+            <canvas class="loupe" id="loupe" hidden aria-hidden="true"></canvas>
+            <div class="editor-tools">
+              <button type="button" class="icon-chip" id="fit-btn" aria-label="Zoom out to the whole photo" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+              </button>
             </div>
-            <p class="editor-readout" id="editor-readout" aria-hidden="true"></p>
           </div>
 
           <div class="viz-cover" id="viz-cover">
@@ -387,12 +399,159 @@
           </div>
         </div>
       </section>
+
+      <!-- Guided steps -->
+      <div class="step-card" id="step-card">
+        <div class="step-top">
+          <button type="button" class="back-btn" id="back-btn" hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+            Back
+          </button>
+          <ol class="step-dots" id="step-dots" aria-label="Steps">
+            <li aria-current="step"><span class="visually-hidden">Step 1: Add your room</span></li>
+            <li><span class="visually-hidden">Step 2: Tap the corners</span></li>
+            <li><span class="visually-hidden">Step 3: Pick a mirror</span></li>
+            <li><span class="visually-hidden">Step 4: Done</span></li>
+          </ol>
+        </div>
+
+        <!-- 1 -->
+        <section class="step" id="step-1" aria-labelledby="step-1-title">
+          <h2 class="step-title" id="step-1-title" tabindex="-1">Add your room</h2>
+          <div class="big-buttons">
+            <label class="big-btn" id="camera-btn" for="camera-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6L16.5 6h2A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.8"/></svg>
+              Take a photo
+              <input type="file" id="camera-input" accept="image/*" capture="environment">
+            </label>
+            <label class="big-btn light" id="library-btn" for="photo-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="9.5" r="1.8"/><path d="M21 16l-5.5-5.5L5 20"/></svg>
+              Pick a photo
+              <input type="file" id="photo-input" accept="image/*,.heic,.heif">
+            </label>
+          </div>
+          <p class="sub-label">Or try ours</p>
+          <div class="sample-row">
+            <button type="button" class="sample-thumb" id="sample-living" data-sample="living" aria-pressed="false">
+              <img src="/images/rooms/living.jpg" alt="" width="160" height="120">
+              Living room
+            </button>
+            <button type="button" class="sample-thumb" id="sample-bedroom" data-sample="bedroom" aria-pressed="false">
+              <img src="/images/rooms/bedroom.jpg" alt="" width="160" height="120">
+              Bedroom
+            </button>
+          </div>
+          <p class="viz-msg" id="photo-msg" role="status" aria-live="polite"></p>
+        </section>
+
+        <!-- 2 -->
+        <section class="step" id="step-2" aria-labelledby="step-2-title" hidden>
+          <h2 class="step-title" id="step-2-title" tabindex="-1">Tap the corners</h2>
+          <p class="step-line">Drag the dots onto the room's corners.</p>
+          <div class="chip-row" role="group" aria-label="Ceiling height">
+            <span class="chip-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/></svg>
+              Ceiling
+            </span>
+            <button type="button" class="chip" id="ceiling-low" data-ceiling="2.4" aria-pressed="false">Low</button>
+            <button type="button" class="chip" id="ceiling-normal" data-ceiling="2.7" aria-pressed="true">Normal</button>
+            <button type="button" class="chip" id="ceiling-high" data-ceiling="3" aria-pressed="false">High</button>
+          </div>
+          <p class="room-line" id="room-line" aria-live="polite"></p>
+          <div class="small-row">
+            <button type="button" class="small-btn" id="undo-btn" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+              Undo
+            </button>
+            <button type="button" class="small-btn" id="add-corner-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>
+              Corner
+            </button>
+            <button type="button" class="small-btn" id="remove-corner-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M5 12h14"/></svg>
+              Corner
+            </button>
+          </div>
+          <button type="button" class="btn-big" id="looks-right-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5 9-10"/></svg>
+            Looks right
+          </button>
+          <details class="more" id="more-settings">
+            <summary>More settings</summary>
+            <div class="more-body">
+              <div class="chip-row" role="group" aria-label="Wall layout">
+                <button type="button" class="chip" id="layout-three" data-layout="three">Three walls</button>
+                <button type="button" class="chip" id="layout-two" data-layout="two">Two walls (corner)</button>
+              </div>
+              <div class="field-row">
+                <div class="field-top"><label for="lens-input">Lens</label><output id="lens-value" for="lens-input">69°</output></div>
+                <input type="range" id="lens-input" min="45" max="110" step="1" value="69">
+                <div class="chip-row">
+                  <button type="button" class="chip" id="lens-auto" aria-pressed="true">Auto</button>
+                  <button type="button" class="chip" id="lens-main" data-lens="69" aria-pressed="false">Main camera</button>
+                  <button type="button" class="chip" id="lens-wide" data-lens="104" aria-pressed="false">Ultra-wide</button>
+                </div>
+              </div>
+              <label class="check"><input type="checkbox" id="ceiling-mode" checked> Top dots are on the ceiling line</label>
+              <div class="field-row" id="height-row" hidden>
+                <div class="field-top"><label for="height-input">Camera height</label><output id="height-value" for="height-input">1.50 m</output></div>
+                <input type="range" id="height-input" min="0.6" max="2.0" step="0.05" value="1.5">
+              </div>
+              <label class="check"><input type="checkbox" id="horizon-mode"> Set eye level by hand</label>
+              <div class="field-row" id="horizon-row" hidden>
+                <div class="field-top"><label for="horizon-input">Eye level</label><output id="horizon-value" for="horizon-input">50%</output></div>
+                <input type="range" id="horizon-input" min="10" max="90" step="0.5" value="50">
+              </div>
+              <p class="room-line" id="tech-line"></p>
+            </div>
+          </details>
+        </section>
+
+        <!-- 3 -->
+        <section class="step" id="step-3" aria-labelledby="step-3-title" hidden>
+          <h2 class="step-title" id="step-3-title" tabindex="-1">Pick a mirror</h2>
+          <div class="mirror-cards" id="mirror-list" role="radiogroup" aria-labelledby="step-3-title"></div>
+          <button type="button" class="btn-big" id="mirror-done-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5 9-10"/></svg>
+            Done
+          </button>
+        </section>
+
+        <!-- 4 -->
+        <section class="step" id="step-4" aria-labelledby="step-4-title" hidden>
+          <h2 class="step-title" id="step-4-title" tabindex="-1">Looking good</h2>
+          <div class="chosen">
+            <span class="mirror-pic" id="chosen-pic"></span>
+            <span>
+              <span class="chosen-name" id="chosen-name">Grand Royale Arch</span><br>
+              <span class="chosen-meta" id="chosen-meta">75 × 195 cm · $1,290</span>
+            </span>
+          </div>
+          <p class="tip-row">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>Drag mirror</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>Drag room</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 9v6M9 12h6"/></svg>Tap a wall</span>
+          </p>
+          <button type="button" class="switch" id="lean-toggle" role="switch" aria-checked="true" hidden>
+            <span id="lean-label">Leaning on the floor</span>
+            <span class="switch-track" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="btn-big" id="add-to-bag-btn" data-add="grand-royale-arched-brass-floor-mirror">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>
+            <span id="add-to-bag-label">Add to bag · $1,290</span>
+          </button>
+          <button type="button" class="btn-big secondary" id="start-again-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            Start again
+          </button>
+        </section>
+      </div>
     </div>
   </main>
 
   <footer class="viz-footer">
     <div class="container">
-      <span>© 2026 Mirror House Melbourne. Previews are a guide; sizes are to scale for the camera height you set.</span>
+      <span>© 2026 Mirror House Melbourne. Previews are a guide. Your photo never leaves your device.</span>
       <a href="/">Back to the shop</a>
     </div>
   </footer>
@@ -406,7 +565,7 @@
       var p = document.getElementById('viz-cover-text');
       if (t && p) {
         t.textContent = "The 3D view didn't load";
-        p.textContent = 'Check your connection and refresh the page. If it keeps happening, try the latest Chrome, Safari or Edge.';
+        p.textContent = 'Check your connection and refresh the page.';
       }
     }, 12000);
   </script>
