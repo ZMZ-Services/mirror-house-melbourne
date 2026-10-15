@@ -69,19 +69,30 @@ const SAMPLES = {
   }
 };
 
-function layoutPreset(kind) {
+// Default dots for an upload: a plausible room (camera 1.35 m up, 2.7 m ceiling) seen through a phone's
+// main camera, so most photos need only small nudges. Sized for the photo's shape.
+function layoutPreset(kind, photo) {
+  const w = photo ? photo.w : 1600, h = photo ? photo.h : 1200;
+  const f = (Math.max(w, h) / 2) / Math.tan(DEFAULT_LENS * DEG / 2);
+  const cam = 1.35, up = 2.7 - cam;
   if (kind === 'two') {
+    // Looking into a corner 5.5 m away; both walls at 45°, so their vanishing points sit at x = c ± f.
+    const t = (w / 2 + f) / f;
+    const yb = clamp(0.5 + f * cam / 5.5 / h, 0.58, 0.5 + 0.46 / t), yt = clamp(0.5 - f * up / 5.5 / h, 0.5 - 0.46 / t, 0.42);
+    const ey = (y) => clamp(0.5 + t * (y - 0.5), 0.03, 0.97);
     return [
-      { edge: 'l', fx: 0, fy: 0.80, cx: 0, cy: 0.12 },
-      { fx: 0.5, fy: 0.68, cx: 0.5, cy: 0.24 },
-      { edge: 'r', fx: 1, fy: 0.80, cx: 1, cy: 0.12 }
+      { edge: 'l', fx: 0, fy: ey(yb), cx: 0, cy: ey(yt) },
+      { fx: 0.5, fy: yb, cx: 0.5, cy: yt },
+      { edge: 'r', fx: 1, fy: ey(yb), cx: 1, cy: ey(yt) }
     ];
   }
-  // Three walls, one-point view: back wall plus both side walls running out of frame.
-  const x0 = 0.28, x1 = 0.72, yb = 0.68, yt = 0.30, vx = 0.5, vy = 0.5;
-  const edgeAt = (x, cxr) => {
-    const t = (x - vx) / (cxr - vx);
-    return { fy: clamp(vy + t * (yb - vy), 0.02, 0.98), cy: clamp(vy + t * (yt - vy), 0.0, 0.98) };
+  // Three walls, one-point view: a back wall about 4 m wide and 5 m away, side walls running out of frame.
+  const x0 = clamp(0.5 - f * 2 / 5 / w, 0.15, 0.36), x1 = 1 - x0;
+  const te = 0.5 / (0.5 - x0);   // how far the side-wall seams run from the corner to the photo edge
+  const yb = clamp(0.5 + f * cam / 5 / h, 0.58, Math.min(0.86, 0.5 + 0.47 / te)), yt = clamp(0.5 - f * up / 5 / h, 0.1, 0.4);
+  const edgeAt = (x, xc) => {
+    const t = (x - 0.5) / (xc - 0.5);
+    return { fy: clamp(0.5 + t * (yb - 0.5), 0.02, 0.98), cy: clamp(0.5 + t * (yt - 0.5), 0, 0.98) };
   };
   const L = edgeAt(0, x0), R = edgeAt(1, x1);
   return [
@@ -118,7 +129,7 @@ const state = {
   photo: null,               // { canvas, w, h }
   posts: SAMPLES.living.posts.map((p) => ({ ...p })),
   lens: 66, lensMode: 'manual',
-  ceilingH: 2.7, ceilingMode: true, camH: 1.5,
+  ceilingH: 2.7, ceilingMode: true, camH: 1.4,
   horizon: SAMPLES.living.horizon,   // manual eye level (fraction of height) or null for auto
   layout: null,
   mirrorId: 'grand-royale',
@@ -1058,7 +1069,7 @@ function usePhoto(photo, source) {
   state.source = source;
   const preset = SAMPLES[source];
   state.preset = preset || null;
-  state.posts = preset ? preset.posts.map((p) => ({ ...p })) : layoutPreset('three');
+  state.posts = preset ? preset.posts.map((p) => ({ ...p })) : layoutPreset('three', photo);
   state.horizon = preset ? preset.horizon : null;
   state.lens = preset ? preset.lens : DEFAULT_LENS;
   state.lensMode = preset ? 'manual' : 'auto';
@@ -1462,7 +1473,7 @@ function initEditor() {
   });
   document.querySelectorAll('[data-layout]').forEach((b) => b.addEventListener('click', () => {
     snapshot();
-    state.posts = layoutPreset(b.dataset.layout);
+    state.posts = layoutPreset(b.dataset.layout, state.photo);
     onPostsChanged(true);
   }));
 }
