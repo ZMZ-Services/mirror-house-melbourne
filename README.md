@@ -39,7 +39,7 @@ Workers Builds settings:
 | --- | --- |
 | Account | zarko@zmzservices.com.au (`zarko-ddc.workers.dev`) |
 | Worker name | `mirror-house-melbourne` (must match `name` in `wrangler.jsonc`) |
-| Repository | `vojinoviczarko95-tech/mirror-house-melbourne` |
+| Repository | `ZMZ-Services/mirror-house-melbourne` |
 | Production branch | `main` |
 | Root directory | `/` |
 | Build command | *(empty)* |
