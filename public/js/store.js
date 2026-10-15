@@ -188,7 +188,7 @@
       if (!list) return;
       if (!lines.length) {
         list.innerHTML = '<div class="drawer-empty"><p>Your bag is empty.</p>' +
-          '<a class="btn btn-secondary" href="/#collection-section" data-close-drawer>Browse the collection</a></div>';
+          '<a class="btn btn-secondary" href="' + ($('#collection-section') ? '' : '/') + '#collection-section" data-close-drawer>Browse the collection</a></div>';
       } else {
         list.innerHTML = lines.map(function (l) {
           var p = l.product;
@@ -256,21 +256,30 @@
       pills.setAttribute('aria-label', 'Filter by category');
       pills.addEventListener('click', function (e) {
         var b = e.target.closest('[data-cat]');
-        if (!b) return;
-        active = b.getAttribute('data-cat') || null;
-        draw();
-        try {
-          var url = new URL(location.href);
-          if (active) url.searchParams.set('category', active); else url.searchParams.delete('category');
-          history.replaceState(null, '', url);
-        } catch (err) { /* preview frames may block history */ }
+        if (b) setActive(b.getAttribute('data-cat') || null);
       });
     }
+    function setActive(cat) {
+      active = cats.indexOf(cat) >= 0 ? cat : null;
+      draw();
+      try {
+        var url = new URL(location.href);
+        if (active) url.searchParams.set('category', active); else url.searchParams.delete('category');
+        history.replaceState(null, '', url);
+      } catch (err) { /* preview frames may block history */ }
+    }
+    // Footer collection links filter in place on the home page instead of reloading it.
+    showCategory = function (cat) {
+      setActive(cat);
+      var section = $('#collection-section');
+      if (section) section.scrollIntoView({ behavior: 'smooth' });
+    };
     if (active) {
       var section = $('#collection-section');
       if (section) section.scrollIntoView();
     }
   }
+  var showCategory = null;
 
   // ---------- product detail (quick view and product page share this) ----------
   function detailHtml(p, headingTag) {
@@ -411,8 +420,13 @@
     if (t.closest('#close-quickview-btn') || t.id === 'quickview-overlay') { closeQuickView(); return; }
     if ((el = t.closest('#drawer-checkout-btn'))) {
       if (el.getAttribute('aria-disabled') === 'true') { e.preventDefault(); toast('Your bag is empty.'); }
-      else if (PREVIEW) { e.preventDefault(); toast('Checkout opens on the live site.'); }
+      else if (PREVIEW) { e.preventDefault(); toast('This is a preview. Check out on the live shop: mirror-house-melbourne.zarko-ddc.workers.dev'); }
       return;
+    }
+    if ((el = t.closest('a[href*="category="]')) && showCategory) {
+      var cat = null;
+      try { cat = new URL(el.getAttribute('href'), location.href).searchParams.get('category'); } catch (err) { /* ignore */ }
+      if (cat) { e.preventDefault(); showCategory(cat); return; }
     }
     if ((el = t.closest('[data-add]'))) {
       addToBag(el.getAttribute('data-add'), 1);
