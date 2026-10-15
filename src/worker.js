@@ -4,7 +4,7 @@
 //          POST /api/newsletter    { email }
 //          POST /api/orders        { email, items: [{ slug, qty }], breakage_cover, white_glove }
 // Admin:   GET  /api/admin/summary live numbers for the back-of-house dashboard
-//          /admin* pages            (HTTP Basic auth, user "admin", password = ADMIN_PASSWORD secret)
+//          (open with no login: this is a demo store)
 
 // Demo store settings (cents). Keep in line with the storefront copy.
 const FREE_FREIGHT_FROM = 15000;
@@ -24,11 +24,6 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
-
-    if (path.startsWith('/admin') || path.startsWith('/api/admin/')) {
-      const denied = await checkAdmin(request, env);
-      if (denied) return denied;
-    }
 
     if (path.startsWith('/api/')) {
       try {
@@ -169,35 +164,4 @@ async function adminSummary(env) {
     low_stock: lowStock.results,
     recent_orders: recent.results,
   });
-}
-
-async function checkAdmin(request, env) {
-  if (!env.ADMIN_PASSWORD) {
-    return new Response('Admin is locked. Set the ADMIN_PASSWORD secret to open it.', { status: 503 });
-  }
-  const header = request.headers.get('authorization') || '';
-  if (header.startsWith('Basic ')) {
-    let decoded = '';
-    try {
-      decoded = atob(header.slice(6));
-    } catch {}
-    const sep = decoded.indexOf(':');
-    const user = decoded.slice(0, sep);
-    const pass = decoded.slice(sep + 1);
-    if (sep > 0 && user === 'admin' && (await safeEqual(pass, env.ADMIN_PASSWORD))) return null;
-  }
-  return new Response('Admin login required.', {
-    status: 401,
-    headers: { 'www-authenticate': 'Basic realm="Mirror House Admin", charset="UTF-8"' },
-  });
-}
-
-// Compare SHA-256 digests in constant time so the password length and content don't leak through timing.
-async function safeEqual(a, b) {
-  const enc = new TextEncoder();
-  const [ha, hb] = await Promise.all([
-    crypto.subtle.digest('SHA-256', enc.encode(a)),
-    crypto.subtle.digest('SHA-256', enc.encode(b)),
-  ]);
-  return crypto.subtle.timingSafeEqual(ha, hb);
 }

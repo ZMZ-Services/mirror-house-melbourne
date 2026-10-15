@@ -7,8 +7,8 @@
   "compatibility_date": "2026-10-01",
   "observability": { "enabled": true },
 
-  // The site lives in ./public. The Worker only runs first for the API and the
-  // admin pages, so it can check the admin password. Everything else is served straight from assets.
+  // The site lives in ./public. The Worker runs first for the API and the admin pages;
+  // everything else is served straight from assets.
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
@@ -18,7 +18,6 @@
   // No database_id on purpose: on the first `wrangler deploy` (Workers Builds), Wrangler's
   // automatic provisioning creates "mirror-house-db" and later deploys find it by name.
   // `npm run deploy` then applies migrations/ to it. Locally, `wrangler dev` uses a local copy.
-  // ADMIN_PASSWORD is a Worker secret set in the Cloudflare dashboard, not in this file.
   "d1_databases": [
     {
       "binding": "DB",

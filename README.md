@@ -14,7 +14,7 @@ Live: <https://mirror-house-melbourne.zarko-ddc.workers.dev>
 | `public/admin-dashboard.html` | Back-of-house dashboard (KPIs, charts, unit economics, stock, cash, actions) plus live D1 figures |
 | `public/css/theme.css`, `public/js/store.js` | Storefront styles; catalogue, bag, quick view, product page and checkout logic |
 | `public/images/` | Original imagery generated with Higgsfield |
-| `src/worker.js` | Cloudflare Worker: serves `public/`, runs the JSON API and password-protects `/admin*` |
+| `src/worker.js` | Cloudflare Worker: serves `public/`, runs the JSON API |
 | `migrations/` | D1 schema and demo product seed |
 | `wrangler.jsonc` | Worker and D1 config (worker `mirror-house-melbourne`, ZMZ Services account) |
 
@@ -25,9 +25,9 @@ Live: <https://mirror-house-melbourne.zarko-ddc.workers.dev>
 | `GET /api/products` | public | Active catalogue from D1 |
 | `POST /api/newsletter` | public | `{ email }`: saves a newsletter signup |
 | `POST /api/orders` | public | `{ email, items: [{ slug, qty }], breakage_cover, white_glove }`: records a pending order. Prices come from D1, never the browser |
-| `GET /api/admin/summary` | admin | Live 30-day revenue, orders, AOV, breakage-cover uptake, sales by category, low stock, recent orders, subscribers |
+| `GET /api/admin/summary` | open (demo) | Live 30-day revenue, orders, AOV, breakage-cover uptake, sales by category, low stock, recent orders, subscribers |
 
-The admin pages (`/admin*`) and `/api/admin/*` use browser login: user `admin`, password = the `ADMIN_PASSWORD` Worker secret. Until that secret is set, admin stays locked (503).
+The dashboard (`/admin-dashboard.html`) and `/api/admin/*` are open with no login, because this is a demo store. Add authentication before using it with real data.
 
 ## Deploying (Cloudflare Workers Builds)
 
@@ -49,13 +49,11 @@ Workers Builds settings:
 `npm run deploy` runs `wrangler deploy` and then `wrangler d1 migrations apply DB --remote`.
 
 - **Database.** `wrangler.jsonc` names the D1 database `mirror-house-db` without an ID, so the first deploy creates it automatically (Wrangler's automatic provisioning). Every deploy after that finds it by name and applies any new files in `migrations/`.
-- **Admin password.** After the first deploy, open the Worker in the Cloudflare dashboard → Settings → Variables and Secrets → Add → type **Secret**, name `ADMIN_PASSWORD`. Secrets survive later deploys.
 
 ## Run locally
 
 ```sh
 npm install
-printf 'ADMIN_PASSWORD=localtest\n' > .dev.vars
 npm run db:migrate:local
 npm run dev            # http://localhost:8787
 ```
