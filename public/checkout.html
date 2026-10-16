@@ -2,6 +2,12 @@
 <html lang="en-AU">
 <head>
   <meta charset="UTF-8">
+  <script src="https://js.sentry-cdn.com/3166fd799dc40d46aba21390b5c51fc3.min.js" crossorigin="anonymous"></script>
+  <script>
+    window.sentryOnLoad = function () {
+      Sentry.init({ environment: location.hostname.includes("localhost") ? "development" : "production" });
+    };
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Checkout | Mirror House Melbourne</title>
   <meta name="description" content="Checkout for Mirror House Melbourne.">
