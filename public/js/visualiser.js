@@ -414,6 +414,7 @@ const state = {
   source: 'living',          // living | bedroom | upload
   preset: SAMPLES.living,
   photo: null,               // { canvas, w, h }
+  movedByHand: false,        // the shopper has dragged or tapped the mirror into place (don't move it for them)
   posts: SAMPLES.living.posts.map((p) => ({ ...p })),
   lens: 66, lensMode: 'manual',
   ceilingH: 2.7, ceilingMode: true, camH: 1.4,
@@ -751,6 +752,7 @@ function initThree() {
   controls.zoomSpeed = 0.7;
   controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
   controls.addEventListener('change', () => { needsRender = true; });
+  controls.addEventListener('start', () => { lookedAround = true; });
   reduceMotion.addEventListener?.('change', () => { controls.enableDamping = !reduceMotion.matches; });
 
   roomMaterial = new THREE.ShaderMaterial({
@@ -830,9 +832,13 @@ function reflectorSize() {
   return { w: Math.min(2048, Math.round(w * pr)), h: Math.min(2048, Math.round(h * pr)) };
 }
 
+// The view keeps the mirror in sight as its size changes (a step's sheet, turning a phone), until the shopper
+// places the mirror or looks around themselves.
+let lookedAround = false, lastSize = '';
 function resize() {
+  const { w, h } = viewSize(), sized = lastSize !== w + 'x' + h;
+  lastSize = w + 'x' + h;
   if (renderer) {
-    const { w, h } = viewSize();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(w, h, false);
     fitCameraLens();
@@ -840,6 +846,7 @@ function resize() {
     needsRender = true;
   }
   if (state.step === 2) layoutEditor();
+  else if (sized && state.step >= 3 && !state.movedByHand && !lookedAround) keepMirrorInView();
 }
 
 // Match the 3D camera's lens to the photo: the photo "covers" the viewport, eye level where it was.
@@ -864,16 +871,19 @@ function fitCameraLens() {
 function resetView() {
   const L = state.layout;
   if (!L || !controls) return;
+  lookedAround = false;
   const dist = clamp(L.walls[L.mainWall] ? L.walls[L.mainWall].dist : 4, 1.5, MAX_DIST);
   camera.position.set(0, 0, 0);
   camera.up.set(0, 1, 0);
   controls.target.set(0, Math.sin(L.pitch) * dist, -Math.cos(L.pitch) * dist);
+  // Looking around is kept close to where the photo was taken: further than this, the photo has to stretch
+  // over parts of the room it never saw (the floor and ceiling smear).
   const polar0 = Math.PI / 2 + L.pitch;
-  controls.minPolarAngle = clamp(polar0 - 25 * DEG, 0.1, Math.PI - 0.1);
-  controls.maxPolarAngle = clamp(polar0 + 25 * DEG, 0.1, Math.PI - 0.1);
-  controls.minAzimuthAngle = -40 * DEG;
-  controls.maxAzimuthAngle = 40 * DEG;
-  controls.minDistance = Math.min(0.8, dist * 0.5);
+  controls.minPolarAngle = clamp(polar0 - 16 * DEG, 0.1, Math.PI - 0.1);
+  controls.maxPolarAngle = clamp(polar0 + 16 * DEG, 0.1, Math.PI - 0.1);
+  controls.minAzimuthAngle = -28 * DEG;
+  controls.maxAzimuthAngle = 28 * DEG;
+  controls.minDistance = Math.min(0.8, dist * 0.7);
   controls.maxDistance = dist + L.Zf * 0.85;
   fitCameraLens();
   controls.update();
@@ -1102,12 +1112,20 @@ function syncExtraUi() {
   if (lbl3) lbl3.textContent = txt;
 }
 // Move the current mirror along the wall so it doesn't sit on top of the ones already placed.
+// True when the current mirror, centred at s on wall wi, keeps a gap from every extra mirror on that wall.
+function clearOfExtras(wi, s) {
+  const w = footprint(mirror.def, mirror.turned).w, gap = 0.25;
+  return extraMirrors.every((m) => {
+    if (m.wallIndex !== wi) return true;
+    const fw = footprint(m.def, m.turned).w;
+    return s + w / 2 + gap / 2 < m.s - fw / 2 || s - w / 2 - gap / 2 > m.s + fw / 2;
+  });
+}
 function offsetFromExtras() {
   if (!extraMirrors.length || !mirror || !state.layout || !state.place) return;
   const wall = currentWall(); if (!wall) return;
-  const def = footprint(mirror.def), gap = 0.25;
-  const taken = extraMirrors.filter((m) => m.wallIndex === state.mirrorWall).map((m) => { const fw = footprint(m.def, m.turned).w; return [m.s - fw / 2, m.s + fw / 2]; });
-  const free = (s) => s - def.w / 2 > 0.04 && s + def.w / 2 < wall.len - 0.04 && taken.every(([a, b]) => s + def.w / 2 + gap / 2 < a || s - def.w / 2 - gap / 2 > b);
+  const def = footprint(mirror.def);
+  const free = (s) => s - def.w / 2 > 0.04 && s + def.w / 2 < wall.len - 0.04 && clearOfExtras(state.mirrorWall, s);
   if (free(state.place.s)) return;
   let best = null;
   for (let d = 0.05; d < wall.len; d += 0.05) {
@@ -1122,7 +1140,9 @@ function addAnotherMirror() {
   extraMirrors.push(mirror);
   mirror = null;
   buildMirror();
+  state.movedByHand = false;
   offsetFromExtras();
+  keepMirrorInView();
   syncExtraUi();
   goStep(3);
 }
@@ -1378,6 +1398,7 @@ function moveMirrorToWall(wallIdx, point) {
   const def = mirrorDef(), wl = state.layout.walls[wallIdx];
   if (!fits(wl, def)) return false;
   state.mirrorWall = wallIdx;
+  state.movedByHand = true;
   const c = wallCoords(wl, point);
   state.place.s = c.s;
   if (!isLeaning()) state.place.h = c.h;
@@ -1420,6 +1441,7 @@ function initPointer() {
       const c = wallCoords(wl, p);
       state.place.s = c.s + drag.offS;
       if (!isLeaning()) state.place.h = c.h + drag.offH;
+      state.movedByHand = true;
       placeMirror();
       return;
     }
@@ -1475,6 +1497,49 @@ function rebuild3D(resetPlacement) {
   if (resetPlacement || !mirror) defaultPlacement();
   if (!mirror) buildMirror(); else placeMirror();
   resetView();
+  if (resetPlacement) { state.movedByHand = false; keepMirrorInView(); }
+}
+
+// The shopper should see the whole mirror in the first view. If its planned spot is off the edge of the photo,
+// slide it along its wall, or onto another wall that's in view, staying as close to the plan as possible.
+const _box = new THREE.Box3(), _corner = new THREE.Vector3();
+function mirrorViewFit() {
+  camera.updateMatrixWorld(true);
+  mirror.mount.updateMatrixWorld(true);
+  _box.setFromObject(mirror.tilt);
+  let worst = 0;
+  for (let i = 0; i < 8; i++) {
+    _corner.set(i & 1 ? _box.max.x : _box.min.x, i & 2 ? _box.max.y : _box.min.y, i & 4 ? _box.max.z : _box.min.z).project(camera);
+    if (_corner.z > 1) return Infinity; // behind the camera
+    worst = Math.max(worst, Math.abs(_corner.x), Math.abs(_corner.y));
+  }
+  return worst; // under 1: every corner on screen
+}
+function keepMirrorInView() {
+  const L = state.layout;
+  if (!mirror || !L || !camera) return;
+  const want = 0.9; // a small margin inside the edges
+  if (mirrorViewFit() <= want && clearOfExtras(state.mirrorWall, state.place.s)) return;
+  const start = { wall: state.mirrorWall, s: state.place.s };
+  const walls = [start.wall].concat(L.walls.map((w) => w.i).filter((i) => i !== start.wall && fits(L.walls[i], mirrorDef())));
+  // Best spot: one where the whole mirror fits (nearest the plan, its own wall first); failing that, the
+  // spot where the least of it is cut off. Never on top of another mirror.
+  let best = null;
+  for (const wi of walls) {
+    const len = L.walls[wi].len, from = wi === start.wall ? start.s : len / 2;
+    state.mirrorWall = wi;
+    for (let sv = 0.05; sv < len; sv += 0.1) {
+      state.place.s = sv;
+      placeMirror();
+      const fit = mirrorViewFit();
+      const score = (clearOfExtras(wi, state.place.s) ? 0 : 100) + (fit <= want ? 0 : 10 + fit) + (wi === start.wall ? 0 : 1) + Math.abs(state.place.s - from) * 0.01;
+      if (!best || score < best.score) best = { score, wall: wi, s: state.place.s };
+    }
+    if (best.score < 1) break; // fits on its own wall
+  }
+  state.mirrorWall = best.wall;
+  state.place.s = best.s;
+  placeMirror();
 }
 
 const half = (x) => {
@@ -2141,8 +2206,8 @@ function goStep(n) {
   needsRender = true;
   const title = $(`#step-${n}-title`);
   if (prev !== n && title) title.focus({ preventScroll: true });
-  // Sheet height changes with the step: keep sizes in sync.
-  requestAnimationFrame(() => { resize(); });
+  // Sheet height changes with the step: keep sizes in sync (resize also keeps the mirror in view).
+  requestAnimationFrame(resize);
 }
 
 function initSteps() {
@@ -2197,6 +2262,12 @@ function boot() {
     get layout() { return state.layout; },
     get camera() { return camera; },
     get controls() { return controls; },
+    mirrorViewFit() { return mirror ? mirrorViewFit() : null; },
+    // Every mirror in the room (extra ones first, the current one last): wall, centre along it and width.
+    mirrors() {
+      const one = (m, wall, s) => ({ wall, s, w: footprint(m.def, m.turned).w });
+      return extraMirrors.map((m) => one(m, m.wallIndex, m.s)).concat(mirror ? [one(mirror, state.mirrorWall, state.place.s)] : []);
+    },
     setPosts(posts) { state.posts = posts.map((p) => ({ ...p })); onPostsChanged(true); },
     mirrorScreenPoint() {
       if (!mirror) return null;
