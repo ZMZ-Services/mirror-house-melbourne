@@ -252,7 +252,7 @@
   var SETTINGS = {
     storeName: 'Mirror House Melbourne', email: 'hello@mirrorhousemelbourne.com.au', phone1: '0413 173 705', phone2: '0406 224 524',
     address: 'Point Cook, VIC 3030', legalName: 'Mirrorhousemelbourne', abn: '50 417 829 779', hours: 'Mon–Sat, 9am–5pm', currency: 'AUD', gstIncluded: true, gstRegistered: false,
-    instagram: 'https://www.instagram.com/mirrorhousemelbourne/', facebook: ''
+    instagram: 'https://www.instagram.com/mirrorhousemelbourne/', facebook: 'https://www.facebook.com/profile.php?id=61596421771974'
   };
 
   // ---------- store (live: the database, through /api/admin) ----------
