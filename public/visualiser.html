@@ -197,7 +197,7 @@
     .icon-chip:hover { background: var(--surface); }
     .icon-chip[hidden] { display: none; }
     .coach {
-      position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 4;
+      position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 4; /* top: clear of the mirror */
       display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100% - 24px);
       padding: 10px 10px 10px 16px; border-radius: 18px; background: rgba(29, 26, 23, 0.86); color: var(--on-dark);
       font-size: 0.95rem; line-height: 1.3;
@@ -304,6 +304,13 @@
       .mirror-cards::-webkit-scrollbar { display: none; }
       .mirror-card { scroll-snap-align: start; }
       .mirror-pic { aspect-ratio: 1 / 1; }
+      /* Step 4 on a phone: a slimmer sheet so the room and mirror get most of the screen. */
+      .step-card:has(#step-4:not([hidden])) { max-height: 46%; }
+      #step-4 .tip-row { display: none; }
+      #step-4 { grid-template-columns: 1fr 1fr; gap: 10px 8px; }
+      #step-4 > * { grid-column: 1 / -1; }
+      #step-4 > #add-mirror-btn, #step-4 > #start-again-btn { grid-column: auto; min-height: 48px; padding: 0 10px; font-size: 0.92rem; }
+      .coach { top: 70px; font-size: 0.88rem; } /* below the Reset button */
     }
     @media (max-width: 380px) {
       .big-btn { min-height: 96px; font-size: 1rem; }
