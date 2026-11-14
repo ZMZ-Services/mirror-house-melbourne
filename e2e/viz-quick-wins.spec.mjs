@@ -72,3 +72,16 @@ test('another mirror is placed beside the first, never on top of it, and stays i
     expect(await page.evaluate(() => window.mhViz.mirrorViewFit()), key).toBeLessThanOrEqual(1);
   }
 });
+
+test('once the shopper has looked around, a resize leaves the mirror where it is', async ({ page }) => {
+  await openSample(page, 'living');
+  await finish(page);
+  const before = await page.evaluate(() => {
+    window.mhViz.controls.dispatchEvent({ type: 'start' }); // as when the shopper starts to orbit
+    return window.mhViz.mirrors();
+  });
+  const vp = page.viewportSize();
+  await page.setViewportSize({ width: Math.round(vp.width * 0.6), height: vp.height - 60 });
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.mhViz.mirrors())).toEqual(before);
+});
