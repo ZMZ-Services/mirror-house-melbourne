@@ -1579,11 +1579,17 @@ function findCornerIssue(L) {
   return null;
 }
 
+// The written warning is a live region: write it only when it changes, and not mid-drag, so a screen reader
+// says it once.
+function syncCornerCheck() {
+  const text = cornerIssue ? cornerIssue.text : '';
+  if (!activeDrag && guideEl.check.textContent !== text) guideEl.check.textContent = text;
+}
 function updateRoomText() {
   const L = state.layout;
   if (!L) return;
   cornerIssue = findCornerIssue(L);
-  guideEl.check.textContent = cornerIssue ? cornerIssue.text : '';
+  syncCornerCheck();
   el.roomLine.innerHTML = L.nudges.length
     ? 'Nearly there. Move the dot with the note.'
     : `Room about <strong>${half(Math.max(1, L.size.width))} × ${half(Math.max(1, L.size.depth))} m</strong>`;
@@ -1783,6 +1789,7 @@ function drawEditor() {
   // While asking "How many walls?", show the photo on its own.
   const asking = guide.phase === 'walls';
   el.dotLayer.hidden = asking;
+  el.undo.disabled = !history.length;
   if (asking) {
     el.svg.innerHTML = ''; el.nudgeLayer.innerHTML = ''; el.hand.hidden = true;
     el.addCorner.disabled = el.removeCorner.disabled = true;
@@ -1855,7 +1862,6 @@ function drawEditor() {
     el.hand.style.left = `${q[0]}px`; el.hand.style.top = `${q[1]}px`;
   }
 
-  el.undo.disabled = !history.length;
   el.addCorner.disabled = P.length >= 6;
   el.removeCorner.disabled = !P.some((p) => !p.edge) || P.length <= 2;
 }
@@ -1943,6 +1949,15 @@ function chooseWalls(kind) {
   guide.phase = guide.phase === 'free' ? 'free' : 'guide'; guide.k = 0;
   onPostsChanged(true);
 }
+// Keeps the guide on the right dot when corners are added or removed mid-guide: dots from post i on move by
+// `by` posts. A new corner (by 1) is guided next if the guide had passed it; a removed one (by -1) hands on
+// to the dot that took its place.
+function guideShift(i, by) {
+  if (guide.phase !== 'guide') return;
+  if (by > 0) guide.k = Math.min(guide.k, 2 * i);
+  else if (guide.k >= 2 * i + 2) guide.k -= 2;
+  else guide.k = Math.min(guide.k, 2 * i);
+}
 function guideNext() {
   if (guide.phase !== 'guide') return;
   guide.k++;
@@ -1960,9 +1975,17 @@ function undo() {
   const prev = history.pop();
   if (!prev) return;
   const s = JSON.parse(prev);
+  // Undoing the walls answer on an upload asks the question again; mid-guide, the guide steps back to the
+  // first dot that changed.
+  if (!history.length && !state.preset) guide.phase = 'walls';
+  else if (guide.phase === 'guide') {
+    const first = s.posts.findIndex((p, i) => JSON.stringify(p) !== JSON.stringify(state.posts[i]));
+    if (first >= 0) guide.k = Math.min(guide.k, 2 * first);
+  }
   state.posts = s.posts; state.horizon = s.horizon;
   syncSettingsUi();
   onPostsChanged(true);
+  if (guide.phase === 'walls') guideEl.question.querySelector('button').focus({ preventScroll: true });
 }
 
 function onPostsChanged(structural) {
@@ -2082,6 +2105,7 @@ function initEditor() {
       activeDrag.dot.classList.remove('active');
       activeDrag = null;
       el.loupe.hidden = true;
+      syncCornerCheck();
       if (placed) guideNext(); else drawEditor();
     }
     pointers.delete(e.pointerId);
@@ -2100,7 +2124,13 @@ function initEditor() {
     const dot = e.target.closest('.dot');
     if (!dot) return;
     const g = guideDot();
-    if (e.key === 'Enter' && g && g.i === +dot.dataset.post && g.end === dot.dataset.end) { e.preventDefault(); guideNext(); return; }
+    if (e.key === 'Enter' && g && g.i === +dot.dataset.post && g.end === dot.dataset.end) {
+      e.preventDefault();
+      guideNext();
+      const n = guideDot();
+      if (n) el.dotLayer.querySelector(`.dot[data-post="${n.i}"][data-end="${n.end}"]`).focus({ preventScroll: true });
+      return;
+    }
     const dirs = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     const d = dirs[e.key];
     if (!d) return;
@@ -2128,6 +2158,7 @@ function initEditor() {
     const a = P[j], b = P[j + 1];
     P.splice(j + 1, 0, { fx: (a.fx + b.fx) / 2, fy: (a.fy + b.fy) / 2, cx: (a.cx + b.cx) / 2, cy: (a.cy + b.cy) / 2 });
     selectedPost = j + 1;
+    guideShift(j + 1, 1);
     onPostsChanged(true);
   });
   el.removeCorner.addEventListener('click', () => {
@@ -2139,6 +2170,7 @@ function initEditor() {
     snapshot();
     P.splice(i, 1);
     selectedPost = -1;
+    guideShift(i, -1);
     onPostsChanged(true);
   });
   document.querySelectorAll('[data-layout]').forEach((b) => b.addEventListener('click', () => chooseWalls(b.dataset.layout)));
