@@ -319,6 +319,50 @@
     @media (prefers-reduced-motion: reduce) {
       .hand-hint svg { animation: none; }
     }
+
+    /* B: guided corners */
+    .walls-q { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .walls-q[hidden] { display: none; }
+    .wall-choice {
+      display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 92px; padding: 8px 4px;
+      border: 2px solid var(--line); border-radius: 14px; background: var(--bg); color: var(--ink); cursor: pointer;
+      font-size: 0.92rem; font-weight: 500; line-height: 1.15; text-align: center;
+    }
+    .wall-choice:hover { border-color: var(--brass); }
+    .wall-choice span { display: block; font-size: 0.78rem; font-weight: 400; color: var(--muted); }
+    .wall-choice svg { width: 48px; height: 36px; }
+    .wd-wall { fill: color-mix(in srgb, var(--brass) 14%, var(--bg)); stroke: var(--ink-2); stroke-width: 1.2; stroke-linejoin: round; }
+    .wd-line { stroke: var(--ink); stroke-width: 1.6; }
+    .wd-floor { fill: #E3C98F; stroke: var(--ink); stroke-width: 1; }
+    .wd-top { fill: #FFFDF9; stroke: var(--ink); stroke-width: 1; }
+    .guide-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: -4px; }
+    .guide-row[hidden] { display: none; }
+    #guide-next-btn { background: var(--ink); border-color: var(--ink); color: var(--on-dark); font-weight: 500; }
+    #guide-next-btn:hover { background: var(--brass-deep); border-color: var(--brass-deep); }
+    .corner-check { padding: 10px 12px; border-radius: 12px; border: 1px solid #E2553F; background: color-mix(in srgb, #E2553F 7%, var(--bg)); color: var(--ink); }
+    #editor-dots[hidden] { display: none; }
+    .dot.dim { opacity: 0.55; }
+    .dot.guide { z-index: 3; }
+    .dot.guide::before {
+      content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -14px 0 0 -14px;
+      border-radius: 50%; border: 3px solid #E3C98F; animation: guide-pulse 1.6s var(--ease) infinite;
+    }
+    @keyframes guide-pulse {
+      0% { transform: scale(1); opacity: 0.95; }
+      100% { transform: scale(2.3); opacity: 0; }
+    }
+    @media (pointer: coarse) {
+      .dot { width: 60px; height: 60px; margin: -30px 0 0 -30px; }
+    }
+    @media (max-width: 900px) {
+      .wall-editor .editor-tools { top: 8px; }
+      .wall-editor .icon-chip.small { min-height: 42px; padding: 0 12px; }
+      #step-2 { gap: 10px; }
+      .wall-choice { min-height: 80px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .dot.guide::before { animation: none; transform: scale(1.6); }
+    }
   </style>
 
   <script type="importmap">
@@ -483,7 +527,25 @@
         <!-- 2 -->
         <section class="step" id="step-2" aria-labelledby="step-2-title" hidden>
           <h2 class="step-title" id="step-2-title" tabindex="-1">Tap the corners</h2>
-          <p class="step-line">Drag the dots onto the room's corners.</p>
+          <p class="step-line" id="corner-line" aria-live="polite">Drag the dots onto the room's corners.</p>
+          <div class="walls-q" id="walls-q" role="group" aria-label="How many walls can you see?" hidden>
+            <button type="button" class="wall-choice" id="walls-one" data-walls="one">
+              <svg viewBox="0 0 48 36" aria-hidden="true" focusable="false"><path class="wd-wall" d="M4 6h40v22H4z"/><path class="wd-line" d="M4 6v22M44 6v22"/><circle class="wd-top" cx="4" cy="6" r="3"/><circle class="wd-top" cx="44" cy="6" r="3"/><circle class="wd-floor" cx="4" cy="28" r="3"/><circle class="wd-floor" cx="44" cy="28" r="3"/></svg>
+              One wall
+            </button>
+            <button type="button" class="wall-choice" id="walls-two" data-walls="two">
+              <svg viewBox="0 0 48 36" aria-hidden="true" focusable="false"><path class="wd-wall" d="M4 2l20 6v22L4 34zM44 2l-20 6v22l20 4z"/><path class="wd-line" d="M24 8v22"/><circle class="wd-top" cx="24" cy="8" r="3"/><circle class="wd-floor" cx="24" cy="30" r="3"/></svg>
+              A corner<span>two walls</span>
+            </button>
+            <button type="button" class="wall-choice" id="walls-three" data-walls="three">
+              <svg viewBox="0 0 48 36" aria-hidden="true" focusable="false"><path class="wd-wall" d="M2 2l12 7v18L2 34zM14 9h20v18H14zM46 2l-12 7v18l12 7z"/><path class="wd-line" d="M14 9v18M34 9v18"/><circle class="wd-top" cx="14" cy="9" r="3"/><circle class="wd-top" cx="34" cy="9" r="3"/><circle class="wd-floor" cx="14" cy="27" r="3"/><circle class="wd-floor" cx="34" cy="27" r="3"/></svg>
+              Three walls
+            </button>
+          </div>
+          <div class="guide-row" id="guide-row" hidden>
+            <button type="button" class="small-btn" id="guide-next-btn">Next dot</button>
+            <button type="button" class="small-btn" id="guide-skip-btn">Skip, I'll drag them myself</button>
+          </div>
           <div class="chip-row" role="group" aria-label="Ceiling height">
             <span class="chip-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/></svg>
@@ -494,6 +556,7 @@
             <button type="button" class="chip" id="ceiling-high" data-ceiling="3" aria-pressed="false">High</button>
           </div>
           <p class="room-line" id="room-line" aria-live="polite"></p>
+          <p class="viz-msg corner-check" id="corner-check" role="status"></p>
           <button type="button" class="btn-big" id="looks-right-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5 9-10"/></svg>
             Looks right
@@ -502,8 +565,9 @@
             <summary>More settings</summary>
             <div class="more-body">
               <div class="chip-row" role="group" aria-label="Wall layout">
-                <button type="button" class="chip" id="layout-three" data-layout="three">Three walls</button>
-                <button type="button" class="chip" id="layout-two" data-layout="two">Two walls (corner)</button>
+                <button type="button" class="chip" id="layout-one" data-layout="one" aria-pressed="false">One wall</button>
+                <button type="button" class="chip" id="layout-two" data-layout="two" aria-pressed="false">Two walls (corner)</button>
+                <button type="button" class="chip" id="layout-three" data-layout="three" aria-pressed="false">Three walls</button>
               </div>
               <div class="field-row">
                 <div class="field-top"><label for="lens-input">Lens</label><output id="lens-value" for="lens-input">69°</output></div>

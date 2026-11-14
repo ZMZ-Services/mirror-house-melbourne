@@ -102,6 +102,14 @@ function layoutPreset(kind, photo) {
   const w = photo ? photo.w : 1600, h = photo ? photo.h : 1200;
   const f = (Math.max(w, h) / 2) / Math.tan(DEFAULT_LENS * DEG / 2);
   const cam = 1.35, up = 2.7 - cam;
+  if (kind === 'one') {
+    // One wall square-on, 4 m away, running out of frame on both sides: edge posts only.
+    const yb = clamp(0.5 + f * cam / 4 / h, 0.58, 0.92), yt = clamp(0.5 - f * up / 4 / h, 0.06, 0.42);
+    return [
+      { edge: 'l', fx: 0, fy: yb, cx: 0, cy: yt },
+      { edge: 'r', fx: 1, fy: yb, cx: 1, cy: yt }
+    ];
+  }
   if (kind === 'two') {
     // Looking into a corner 5.5 m away; both walls at 45°, so their vanishing points sit at x = c ± f.
     const t = (w / 2 + f) / f;
@@ -1529,9 +1537,43 @@ const half = (x) => {
   const v = Math.round(x * 2) / 2;
   return Number.isInteger(v) ? String(v) : v.toFixed(1);
 };
+// Friendly sense checks on the dots. Never a block: a plain note near "Looks right", and a red ring on the dot.
+let cornerIssue = null;
+function findCornerIssue(L) {
+  const P = state.posts, { w, h } = state.photo;
+  const carryOn = ' Or tap Looks right to carry on.';
+  const bad = P.findIndex((p) => p.cy > p.fy - 0.01);
+  if (bad >= 0) return { post: bad, end: 'ceil', text: `The top dot of ${postName(bad).toLowerCase()} is below its floor dot. Top dots go up where the walls meet the ceiling.${carryOn}` };
+  // Neighbouring posts out of order, or their upright lines crossing: the walls would fold over.
+  const crosses = (a, b, c, d) => {
+    const side = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+    return side(a, b, c) * side(a, b, d) < 0 && side(c, d, a) * side(c, d, b) < 0;
+  };
+  for (let j = 0; j + 1 < P.length; j++) {
+    const a = P[j], b = P[j + 1];
+    const px = (u, v) => [u * w, v * h];
+    if (b.fx <= a.fx || b.cx <= a.cx || crosses(px(a.fx, a.fy), px(a.cx, a.cy), px(b.fx, b.fy), px(b.cx, b.cy))) {
+      return { post: j + 1, end: 'floor', text: `Two corners have crossed over, so the walls fold into each other. Keep the dots in order from left to right.${carryOn}` };
+    }
+  }
+  const nums = [L.H, L.roomH, L.size.width, L.size.depth, ...L.walls.map((wl) => wl.len)];
+  if (!nums.every(Number.isFinite)) return { post: 0, end: 'floor', text: `We can't make a room from these dots. Check each dot sits on a corner, or tap Undo.${carryOn}` };
+  const { width, depth } = L.size;
+  if (width > 14 || depth > 14 || width < 1 || depth < 0.8 || L.walls.some((wl) => !wl.partial && wl.len < 0.3)) {
+    const dist = L.F.map((p) => Math.hypot(p[0], p[1]));
+    return { post: dist.indexOf(Math.max(...dist)), end: 'floor', text: `That makes a room about ${half(width)} × ${half(depth)} m, which seems unlikely. Check the floor dots sit where the walls meet the floor.${carryOn}` };
+  }
+  if (L.H < 0.7 || L.H > 2.2) {
+    return { post: Math.max(0, P.findIndex((p) => !p.edge)), end: 'floor', text: `That puts the camera ${L.H.toFixed(1)} m off the floor, which seems unlikely. Check the floor dots and top dots.${carryOn}` };
+  }
+  return null;
+}
+
 function updateRoomText() {
   const L = state.layout;
   if (!L) return;
+  cornerIssue = findCornerIssue(L);
+  guideEl.check.textContent = cornerIssue ? cornerIssue.text : '';
   el.roomLine.innerHTML = L.nudges.length
     ? 'Nearly there. Move the dot with the note.'
     : `Room about <strong>${half(Math.max(1, L.size.width))} × ${half(Math.max(1, L.size.depth))} m</strong>`;
@@ -1580,6 +1622,7 @@ function usePhoto(photo, source) {
   const preset = SAMPLES[source];
   state.preset = preset || null;
   state.posts = preset ? preset.posts.map((p) => ({ ...p })) : layoutPreset('three', photo);
+  setGuide(preset ? 'free' : 'walls');
   state.horizon = preset ? preset.horizon : null;
   state.lens = preset ? preset.lens : DEFAULT_LENS;
   state.lensMode = preset ? 'manual' : 'auto';
@@ -1672,13 +1715,20 @@ let editorSize = { w: 1, h: 1 };
 const toScreen = (u, v) => [view.ox + u * state.photo.w * view.s, view.oy + v * state.photo.h * view.s];
 const toImage = (x, y) => [(x - view.ox) / (state.photo.w * view.s), (y - view.oy) / (state.photo.h * view.s)];
 
+// Space around the photo: room for the tool buttons above it, and a margin so edge dots stay grabbable.
+// Phones get the slimmest side margin (dots are bigger there and may hang a little past the screen edge);
+// the bottom one clears the step sheet, which overlaps the photo area by 16 px.
+function editorInsets() {
+  return editorSize.w < 600 ? { pad: 14, top: 58, bottom: 34 } : { pad: 28, top: 72, bottom: 28 };
+}
+
 function fitView() {
   const { w, h } = editorSize;
-  const pad = 28, top = 72;   // room for the tool buttons above the photo
-  const s0 = Math.min((w - pad * 2) / state.photo.w, (h - top - pad) / state.photo.h);
+  const { pad, top, bottom } = editorInsets();
+  const s0 = Math.min((w - pad * 2) / state.photo.w, (h - top - bottom) / state.photo.h);
   view.s0 = view.s = s0;
   view.ox = (w - state.photo.w * s0) / 2;
-  view.oy = top + (h - top - pad - state.photo.h * s0) / 2;
+  view.oy = top + (h - top - bottom - state.photo.h * s0) / 2;
 }
 
 function layoutEditor() {
@@ -1692,9 +1742,10 @@ function layoutEditor() {
 
 function clampView() {
   const { w, h } = editorSize;
+  const { top, bottom } = editorInsets();
   const iw = state.photo.w * view.s, ih = state.photo.h * view.s;
   view.ox = iw <= w ? (w - iw) / 2 : clamp(view.ox, w - iw - 40, 40);
-  view.oy = ih <= h - 100 ? 72 + (h - 100 - ih) / 2 : clamp(view.oy, h - ih - 40, 72);
+  view.oy = ih <= h - top - bottom ? top + (h - top - bottom - ih) / 2 : clamp(view.oy, h - ih - 40, top);
 }
 function zoomAt(mx, my, k) {
   const ns = clamp(view.s * k, view.s0, view.s0 * 5);
@@ -1718,6 +1769,15 @@ function drawEditor() {
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(state.photo.canvas, view.ox, view.oy, state.photo.w * view.s, state.photo.h * view.s);
   el.fit.hidden = view.s <= view.s0 * 1.01;
+
+  // While asking "How many walls?", show the photo on its own.
+  const asking = guide.phase === 'walls';
+  el.dotLayer.hidden = asking;
+  if (asking) {
+    el.svg.innerHTML = ''; el.nudgeLayer.innerHTML = ''; el.hand.hidden = true;
+    el.addCorner.disabled = el.removeCorner.disabled = true;
+    return;
+  }
 
   const P = state.posts;
   const fl = P.map((p) => toScreen(p.fx, p.fy)), cl = P.map((p) => toScreen(p.cx, p.cy));
@@ -1745,13 +1805,20 @@ function drawEditor() {
   const want = P.length * 2 + (eyeShown() ? 1 : 0);
   if (el.dotLayer.children.length !== want) renderDots();
   const nud = state.layout ? state.layout.nudges : [];
+  const warns = cornerIssue ? [...nud, cornerIssue] : nud;
+  const active = guideDot();
   P.forEach((p, i) => {
     const f = el.dotLayer.querySelector(`[data-post="${i}"][data-end="floor"]`);
     const t = el.dotLayer.querySelector(`[data-post="${i}"][data-end="ceil"]`);
     f.style.left = `${fl[i][0]}px`; f.style.top = `${fl[i][1]}px`;
     t.style.left = `${cl[i][0]}px`; t.style.top = `${cl[i][1]}px`;
-    f.classList.toggle('warn', nud.some((q) => q.post === i && q.end === 'floor'));
-    t.classList.toggle('warn', nud.some((q) => q.post === i && q.end === 'ceil'));
+    [f, t].forEach((d) => {
+      const end = d.dataset.end;
+      const isActive = !!active && active.i === i && active.end === end;
+      d.classList.toggle('warn', warns.some((q) => q.post === i && q.end === end));
+      d.classList.toggle('guide', isActive);
+      d.classList.toggle('dim', !!active && !isActive);
+    });
   });
   const eye = el.dotLayer.querySelector('[data-end="eye"]');
   if (eye) {
@@ -1770,10 +1837,13 @@ function drawEditor() {
     b.style.top = `${q[1]}px`;
     el.nudgeLayer.appendChild(b);
   }
-  // Hand hint on the first corner's floor dot until the first drag
-  const hintPost = P.findIndex((p) => !p.edge);
+  // Hand hint until the first drag: on the guided dot, or else the first corner's floor dot
+  const hintPost = active ? active.i : P.findIndex((p) => !p.edge);
   el.hand.hidden = state.touched || hintPost < 0 || !!n0;
-  if (!el.hand.hidden) { el.hand.style.left = `${fl[hintPost][0]}px`; el.hand.style.top = `${fl[hintPost][1]}px`; }
+  if (!el.hand.hidden) {
+    const q = active && active.end === 'ceil' ? cl[hintPost] : fl[hintPost];
+    el.hand.style.left = `${q[0]}px`; el.hand.style.top = `${q[1]}px`;
+  }
 
   el.undo.disabled = !history.length;
   el.addCorner.disabled = P.length >= 6;
@@ -1798,6 +1868,76 @@ function renderDots() {
   });
   if (eyeShown()) html += '<button type="button" class="dot eye-dot" data-end="eye" aria-label="Eye level line. Up and down arrows move it."><span>Eye level</span></button>';
   el.dotLayer.innerHTML = html;
+  syncGuideUi();
+}
+
+// Guided placement. An uploaded photo first asks "How many walls can you see?" (phase 'walls'), which sets
+// the starting dots; then one dot at a time with a plain prompt ('guide'); then free dragging ('free').
+// Sample rooms, and anyone who taps Skip, go straight to 'free'.
+const guide = { phase: 'free', k: 0 };
+const guideEl = {
+  line: $('#corner-line'), question: $('#walls-q'), row: $('#guide-row'),
+  next: $('#guide-next-btn'), skip: $('#guide-skip-btn'), check: $('#corner-check')
+};
+const guideOrder = () => state.posts.flatMap((p, i) => [{ i, end: 'floor' }, { i, end: 'ceil' }]);
+const guideDot = () => (guide.phase === 'guide' ? guideOrder()[guide.k] || null : null);
+// The layout the dots make now (any number of corners between two edges), for the walls choices.
+const wallsKind = () => ['one', 'two', 'three'][state.posts.filter((p) => !p.edge).length] || null;
+
+function wallName(j) {
+  const n = state.posts.length - 1;
+  if (n === 1) return 'the wall';
+  if (n === 2) return j ? 'the right wall' : 'the left wall';
+  if (n === 3) return ['the left wall', 'the back wall', 'the right wall'][j];
+  return `wall ${j + 1}`;
+}
+function guidePrompt({ i, end }) {
+  const p = state.posts[i];
+  const top = 'the ceiling (or the top of the wall you can see)';
+  if (p.edge) {
+    const wall = wallName(p.edge === 'l' ? 0 : state.posts.length - 2), side = p.edge === 'l' ? 'left' : 'right';
+    return end === 'floor'
+      ? `Put this dot where ${wall} meets the floor, at the ${side} edge of the photo.`
+      : `Put this dot where ${wall} meets ${top}, at the ${side} edge.`;
+  }
+  return end === 'floor'
+    ? `Put this dot where ${wallName(i - 1)} meets ${wallName(i)}, down at the floor.`
+    : `Now the top of that same corner, where it meets ${top}.`;
+}
+
+function syncGuideUi() {
+  const order = guideOrder();
+  if (guide.phase === 'guide' && guide.k >= order.length) guide.phase = 'free';
+  const active = guideDot();
+  guideEl.question.hidden = guide.phase !== 'walls';
+  guideEl.row.hidden = guide.phase !== 'guide';
+  guideEl.line.textContent = guide.phase === 'walls' ? 'First, how many walls can you see in your photo?'
+    : active ? `Dot ${guide.k + 1} of ${order.length}. ${guidePrompt(active)}`
+      : guide.k ? 'All dots placed. If the room size looks about right, tap Looks right.'
+        : "Drag the dots onto the room's corners.";
+  guideEl.next.textContent = guide.k + 1 >= order.length ? 'Done' : 'Next dot';
+  const kind = guide.phase === 'walls' ? null : wallsKind();
+  document.querySelectorAll('[data-layout]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.layout === kind)));
+}
+function setGuide(phase) {
+  guide.phase = phase; guide.k = 0;
+  if (state.step === 2) { renderDots(); drawEditor(); } else syncGuideUi();
+}
+// Starting dots for a walls answer (the question, or the layout chips in "More settings").
+function chooseWalls(kind) {
+  snapshot();
+  state.posts = layoutPreset(kind, state.photo);
+  state.touched = false;
+  guide.phase = guide.phase === 'free' ? 'free' : 'guide'; guide.k = 0;
+  onPostsChanged(true);
+}
+function guideNext() {
+  if (guide.phase !== 'guide') return;
+  guide.k++;
+  syncGuideUi();
+  drawEditor();
+  // The Next button hides once every dot is placed: keep keyboard focus somewhere useful.
+  if (guide.phase === 'free' && document.activeElement === guideEl.next) el.looksRight.focus({ preventScroll: true });
 }
 
 function snapshot() {
@@ -1926,10 +2066,11 @@ function initEditor() {
   });
   const end = (e) => {
     if (activeDrag && e.pointerId === activeDrag.id) {
+      const g = guideDot(), placed = g && g.i === activeDrag.i && g.end === activeDrag.end;
       activeDrag.dot.classList.remove('active');
       activeDrag = null;
       el.loupe.hidden = true;
-      drawEditor();
+      if (placed) guideNext(); else drawEditor();
     }
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
@@ -1946,6 +2087,8 @@ function initEditor() {
   el.editor.addEventListener('keydown', (e) => {
     const dot = e.target.closest('.dot');
     if (!dot) return;
+    const g = guideDot();
+    if (e.key === 'Enter' && g && g.i === +dot.dataset.post && g.end === dot.dataset.end) { e.preventDefault(); guideNext(); return; }
     const dirs = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     const d = dirs[e.key];
     if (!d) return;
@@ -1986,11 +2129,16 @@ function initEditor() {
     selectedPost = -1;
     onPostsChanged(true);
   });
-  document.querySelectorAll('[data-layout]').forEach((b) => b.addEventListener('click', () => {
-    snapshot();
-    state.posts = layoutPreset(b.dataset.layout, state.photo);
-    onPostsChanged(true);
+  document.querySelectorAll('[data-layout]').forEach((b) => b.addEventListener('click', () => chooseWalls(b.dataset.layout)));
+  document.querySelectorAll('[data-walls]').forEach((b) => b.addEventListener('click', () => {
+    chooseWalls(b.dataset.walls);
+    guideEl.next.focus({ preventScroll: true });
   }));
+  guideEl.next.addEventListener('click', guideNext);
+  guideEl.skip.addEventListener('click', () => {
+    setGuide('free');
+    el.dotLayer.querySelector('.dot').focus({ preventScroll: true });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -2243,6 +2391,7 @@ function boot() {
   window.mhViz = {
     state, solveLayout, goStep,
     get layout() { return state.layout; },
+    get guide() { return { ...guide, dot: guideDot(), issue: cornerIssue && cornerIssue.text }; },
     get camera() { return camera; },
     get controls() { return controls; },
     mirrorViewFit() { return mirror ? mirrorViewFit() : null; },
