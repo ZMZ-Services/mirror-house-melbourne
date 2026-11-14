@@ -9,6 +9,15 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# No deploy previews or branch deploys. Netlify Database gives each preview its own copy of the production data
+# behind a public link, so customer details must never land there. These builds are skipped ("exit 0" = don't build).
+# Production deploys are made from the CLI only (see README: continuous deployment is switched off in the dashboard).
+[context.deploy-preview]
+  ignore = "exit 0"
+
+[context.branch-deploy]
+  ignore = "exit 0"
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
