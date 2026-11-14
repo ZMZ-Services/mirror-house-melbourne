@@ -19,7 +19,7 @@ export default defineConfig({
   webServer: [
     { command: 'node e2e/mock-services.mjs', url: MOCK + '/square.js', reuseExistingServer: false, timeout: 20_000 },
     {
-      command: 'node scripts/build.mjs && env -u NODE_OPTIONS npx netlify dev --offline --port 8888',
+      command: 'node scripts/build.mjs && env -u NODE_OPTIONS npx --yes netlify-cli@27.19.0 dev --offline --port 8888',
       url: SITE + '/index.html', reuseExistingServer: false, timeout: 120_000,
       env: {
         DATABASE_URL: E2E_DB, NETLIFY_TELEMETRY_DISABLED: '1', MH_TRACK_ALL: '1',
