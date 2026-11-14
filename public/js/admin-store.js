@@ -226,6 +226,11 @@
       [['st-name', 'Store name', st.storeName], ['st-legal', 'Registered business name', st.legalName || 'Mirrorhousemelbourne'], ['st-email', 'Contact email', st.email], ['st-p1', 'Phone', st.phone1], ['st-p2', 'Second phone', st.phone2], ['st-addr', 'Address', st.address], ['st-abn', 'ABN', st.abn], ['st-hours', 'Opening hours', st.hours]].map(function (f) {
         return '<div class="field"><label for="' + f[0] + '">' + f[1] + '</label><input id="' + f[0] + '" value="' + esc(f[2]) + '"' + (f[0] === 'st-abn' ? ' inputmode="numeric" placeholder="11 digits" maxlength="14"' : '') + '></div>';
       }).join('') + '</div><label class="check" style="display:flex;gap:10px;align-items:flex-start;margin:4px 0"><input type="checkbox" id="st-gst"' + (st.gstRegistered ? ' checked' : '') + ' style="margin-top:3px"><span><strong>Registered for GST</strong><br><span class="card-sub small">Tick once you\'ve registered for GST with the ATO. Receipts then become <b>Tax invoices</b> showing the GST included, and checkout shows the GST amount. Your prices don\'t change: the price customers see is always the final price.</span></span></label><p class="card-sub small">Your registered business name and ABN appear on packing slips, receipts and in the shop footer.</p><button type="submit" class="btn primary" style="justify-self:end">Save</button></form>' +
+      '<form class="card" id="f-social" novalidate><h2>Social media</h2><div class="form-grid">' +
+      '<div class="field"><label for="so-ig">Instagram page</label><input id="so-ig" type="url" inputmode="url" spellcheck="false" placeholder="https://www.instagram.com/yourpage/" value="' + esc(st.instagram || '') + '"></div>' +
+      '<div class="field"><label for="so-fb">Facebook page</label><input id="so-fb" type="url" inputmode="url" spellcheck="false" placeholder="https://www.facebook.com/yourpage" value="' + esc(st.facebook || '') + '"></div></div>' +
+      '<p class="card-sub small">Each icon shows in your shop\'s footer (and the header on bigger screens) only when its address is filled in. Leave one empty to hide it. Google also uses these to link your business to its pages.</p>' +
+      '<p class="form-msg small" id="so-msg" role="status"></p><button type="submit" class="btn primary" style="justify-self:end">Save</button></form>' +
       '<form class="card" id="f-ga"><h2>Google Analytics</h2><div class="form-grid"><div class="field"><label for="ga-id">Measurement ID</label><input id="ga-id" placeholder="G-XXXXXXXXXX" autocapitalize="characters" spellcheck="false" value="' + esc(st.gaId || '') + '"><span class="help">In Google Analytics: Admin → Data streams → your website → Measurement ID.</span></div></div>' +
       '<p class="card-sub small">Once saved, the shop tracks visits, product views, add to bag, checkout, purchases, quote requests and Try It in Your Room. Data starts from the day it\'s connected, and its full reports are at analytics.google.com. The Analytics page in this admin doesn\'t need it: the shop counts visits itself, with no cookies.</p>' +
       '<p class="form-msg small" id="ga-msg" role="status"></p><button type="submit" class="btn primary" style="justify-self:end">Save</button></form>' +
@@ -241,6 +246,15 @@
       Object.assign(st, { storeName: $('#st-name').value.trim(), email: $('#st-email').value.trim(), phone1: $('#st-p1').value.trim(), phone2: $('#st-p2').value.trim(), address: $('#st-addr').value.trim(),
         abn: abn ? abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4') : '', legalName: $('#st-legal').value.trim(), hours: $('#st-hours').value.trim(), gstRegistered: $('#st-gst').checked });
       D.save(); A.toast('Store details saved');
+    });
+    $('#f-social').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var msg = $('#so-msg'), ig = $('#so-ig').value.trim(), fb = $('#so-fb').value.trim();
+      var ok = function (v, host) { return !v || new RegExp('^(https?://)?(www\\.|m\\.)?' + host.replace('.', '\\.') + '/.+', 'i').test(v); };
+      if (!ok(ig, 'instagram.com')) { msg.textContent = 'Enter your Instagram page address, e.g. https://www.instagram.com/yourpage/'; return; }
+      if (!ok(fb, 'facebook.com')) { msg.textContent = 'Enter your Facebook page address, e.g. https://www.facebook.com/yourpage'; return; }
+      msg.textContent = '';
+      st.instagram = ig; st.facebook = fb; D.save(); A.toast('Social media links saved');
     });
     $('#f-ga').addEventListener('submit', function (e) {
       e.preventDefault();

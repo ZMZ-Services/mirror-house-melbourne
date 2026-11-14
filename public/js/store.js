@@ -1485,3 +1485,43 @@
     });
   });
 })();
+
+// Social media links, set in Admin → Settings (window.MH_SOCIAL from /api/config.js). An icon shows only when
+// its link is set: in the footer, and in the header on wider screens. The links are also added to the
+// Organization in the page's schema.org data (sameAs).
+(function () {
+  var s = window.MH_SOCIAL || {};
+  var ICONS = {
+    instagram: ['Instagram', '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>'],
+    facebook: ['Facebook', '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false"><path d="M14 8h3V4h-3a4 4 0 0 0-4 4v3H7v4h3v6h4v-6h3l1-4h-4V8z"/></svg>']
+  };
+  var safe = function (u) { return /^https:\/\/(www\.)?(instagram|facebook)\.com\//.test(String(u || '')); };
+  var links = ['instagram', 'facebook'].filter(function (k) { return safe(s[k]); });
+  if (!links.length) return;
+  function make(cls) {
+    var wrap = document.createElement('div');
+    wrap.className = cls;
+    links.forEach(function (k) {
+      var a = document.createElement('a');
+      a.href = s[k]; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.className = 'social-link social-' + k;
+      a.setAttribute('aria-label', 'Mirror House on ' + ICONS[k][0] + ' (opens in a new tab)');
+      a.title = ICONS[k][0];
+      a.innerHTML = ICONS[k][1];
+      wrap.appendChild(a);
+    });
+    return wrap;
+  }
+  var col = document.querySelector('.site-footer .footer-col');
+  if (col) col.appendChild(make('footer-social'));
+  var actions = document.querySelector('.header-actions');
+  if (actions) actions.insertBefore(make('header-social'), actions.querySelector('.open-cart-btn'));
+  var ld = document.querySelector('script[type="application/ld+json"]');
+  if (ld) {
+    try {
+      var data = JSON.parse(ld.textContent);
+      (data['@graph'] || [data]).forEach(function (n) { if (n['@type'] === 'Organization') n.sameAs = links.map(function (k) { return s[k]; }); });
+      ld.textContent = JSON.stringify(data);
+    } catch (e) { /* leave the schema as it is */ }
+  }
+})();

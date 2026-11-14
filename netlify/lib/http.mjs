@@ -31,5 +31,5 @@ export function handle(fn) {
   };
 }
 export function siteUrl() {
-  return (process.env.SITE_URL || process.env.URL || 'https://mirror-house-melbourne.netlify.app').replace(/\/+$/, '');
+  return (process.env.SITE_URL || process.env.URL || 'https://mirrorhousemelbourne.com.au').replace(/\/+$/, '');
 }

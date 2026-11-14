@@ -89,13 +89,25 @@ const PRODUCT_FIELDS = {
   seoDesc: ['seo_desc', (v) => text(v, 320)]
 };
 
-const STORE_KEYS = ['storeName', 'email', 'phone1', 'phone2', 'address', 'legalName', 'abn', 'hours', 'currency', 'gstIncluded', 'gstRegistered', 'gaId'];
+const STORE_KEYS = ['storeName', 'email', 'phone1', 'phone2', 'address', 'legalName', 'abn', 'hours', 'currency', 'gstIncluded', 'gstRegistered', 'gaId', 'instagram', 'facebook'];
 function cleanStore(s, prev) {
   const out = Object.assign({}, prev);
   for (const k of STORE_KEYS) if (k in s) out[k] = typeof prev[k] === 'boolean' || k === 'gstRegistered' || k === 'gstIncluded' ? !!s[k] : text(s[k], 200);
   if (out.gaId && !/^G-[A-Z0-9]{4,}$/i.test(out.gaId)) throw bad('That doesn\'t look like a Google Analytics Measurement ID.');
   if (out.abn && !/^\d{2} ?\d{3} ?\d{3} ?\d{3}$/.test(out.abn)) throw bad('An ABN has 11 digits.');
+  out.instagram = socialLink(out.instagram, 'instagram.com', 'Instagram');
+  out.facebook = socialLink(out.facebook, 'facebook.com', 'Facebook');
   return out;
+}
+// A social media page address: empty (no icon shown), or an https link on that site only.
+export function socialLink(v, host, name) {
+  const s = String(v || '').trim();
+  if (!s) return '';
+  let u;
+  try { u = new URL(/^https?:\/\//i.test(s) ? s : 'https://' + s); } catch { u = null; }
+  const h = u ? u.hostname.toLowerCase().replace(/^(www|m)\./, '') : '';
+  if (!u || h !== host || u.pathname.length < 2 || u.username || u.password) throw bad('Enter your ' + name + ' page address, e.g. https://www.' + host + '/yourpage');
+  return 'https://www.' + host + u.pathname + u.search;
 }
 function cleanShipping(s) {
   const zones = (Array.isArray(s.zones) ? s.zones : []).slice(0, 20).map((z, i) => ({

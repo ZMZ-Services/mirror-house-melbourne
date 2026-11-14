@@ -1,5 +1,5 @@
 // GET /api/config.js: the live settings every shop page needs before js/store.js runs:
-// Square's public card-form details, the Google Analytics ID, GST status and the delivery zones.
+// Square's public card-form details, the Google Analytics ID, GST status, social media links and the delivery zones.
 // No secrets and no discount codes are included.
 import { query } from '../lib/db.mjs';
 import { handle } from '../lib/http.mjs';
@@ -18,6 +18,7 @@ export default handle(async () => {
     MH_SQUARE: publicSquareConfig(),
     MH_GA_ID: ga.toUpperCase(),
     MH_GST_REGISTERED: !!store.gstRegistered,
+    MH_SOCIAL: { instagram: store.instagram || '', facebook: store.facebook || '' },
     MH_CHECKOUT_SETTINGS: shipping ? { shipping: { zones: shipping.zones || [], quoteBeyond: !!shipping.quoteBeyond, pickup: shipping.pickup || null, timeframe: shipping.timeframe || '' }, discounts: [] } : null
   };
   const js = Object.entries(out).map(([k, v]) => 'window.' + k + ' = ' + JSON.stringify(v).replace(/</g, '\\u003c') + ';').join('\n') + '\n';
