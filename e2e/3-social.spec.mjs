@@ -10,7 +10,8 @@ const sameAs = (page) => page.evaluate(() => {
   return (d['@graph'].find((n) => n['@type'] === 'Organization') || {}).sameAs || null;
 });
 
-test.afterAll(() => setLinks(IG, ''));
+const FB = 'https://www.facebook.com/profile.php?id=61596421771974';
+test.afterAll(() => setLinks(IG, FB));
 // The shop's settings script is cached for a minute, as on the live site, so each check opens a fresh browser.
 async function fresh(browser, info) { const ctx = await browser.newContext(info.project.use); return ctx.newPage(); }
 
@@ -34,12 +35,13 @@ test('Instagram shows by default; Facebook is hidden until it\'s set', async ({ 
 });
 
 test('both links set: both icons; both empty: no icons and no sameAs', async ({ browser }, info) => {
-  await setLinks(IG, 'https://www.facebook.com/mirrorhousemelbourne');
+  await setLinks(IG, FB);
   let page = await fresh(browser, info);
   await page.goto('/');
   await expect(page.locator('.footer-social a')).toHaveCount(2);
   await expect(page.locator('.footer-social a.social-facebook')).toHaveAttribute('aria-label', 'Mirror House on Facebook (opens in a new tab)');
-  expect(await sameAs(page)).toEqual([IG, 'https://www.facebook.com/mirrorhousemelbourne']);
+  await expect(page.locator('.footer-social a.social-facebook')).toHaveAttribute('href', FB);
+  expect(await sameAs(page)).toEqual([IG, FB]);
   await setLinks('', '');
   page = await fresh(browser, info);
   await page.goto('/');

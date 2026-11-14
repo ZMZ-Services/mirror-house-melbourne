@@ -26,12 +26,16 @@ test('page addresses are tidied, and only that site\'s https pages are accepted'
   }
 });
 
-test('Instagram starts with the shop\'s account; Facebook starts empty', async () => {
+const FB = 'https://www.facebook.com/profile.php?id=61596421771974';
+
+test('Instagram and Facebook start with the shop\'s own pages', async () => {
   const s = await settings();
   assert.equal(s.instagram, 'https://www.instagram.com/mirrorhousemelbourne/');
-  assert.equal(s.facebook, '');
+  assert.equal(s.facebook, FB);
   const js = (await call(config, req('GET', '/api/config.js'))).data;
-  assert.match(js, /window\.MH_SOCIAL = \{"instagram":"https:\/\/www\.instagram\.com\/mirrorhousemelbourne\/","facebook":""\};/);
+  assert.ok(js.includes('window.MH_SOCIAL = ' + JSON.stringify({ instagram: 'https://www.instagram.com/mirrorhousemelbourne/', facebook: FB }) + ';'), js);
+  // The admin's address check keeps the page id.
+  assert.equal(socialLink(FB, 'facebook.com', 'Facebook'), FB);
 });
 
 test('saving and clearing the links in the admin', async () => {
