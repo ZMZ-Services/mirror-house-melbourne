@@ -1910,6 +1910,8 @@ function syncGuideUi() {
   if (guide.phase === 'guide' && guide.k >= order.length) guide.phase = 'free';
   const active = guideDot();
   guideEl.question.hidden = guide.phase !== 'walls';
+  // Until the walls question is answered there's no room to judge yet.
+  el.looksRight.hidden = el.roomLine.hidden = guide.phase === 'walls';
   guideEl.row.hidden = guide.phase !== 'guide';
   guideEl.line.textContent = guide.phase === 'walls' ? 'First, how many walls can you see in your photo?'
     : active ? `Dot ${guide.k + 1} of ${order.length}. ${guidePrompt(active)}`
@@ -2329,6 +2331,8 @@ function goStep(n) {
     editorSize = { w: 0, h: 0 };
     renderDots();
     requestAnimationFrame(layoutEditor);
+    // On a desktop the editor can reach below the window: bring all of it into view so every dot can be reached.
+    if (!window.matchMedia('(max-width: 900px)').matches) el.viewport.scrollIntoView({ block: 'nearest', behavior: reduceMotion.matches ? 'auto' : 'smooth' });
   } else if (prev === 2 && renderer) {
     solve();
     rebuild3D(true);
