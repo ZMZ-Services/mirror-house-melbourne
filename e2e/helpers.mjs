@@ -15,7 +15,7 @@ export function makeToken(email, roles = ['admin']) {
 }
 
 // Answers the Identity widget's calls (/.netlify/identity/...) in the browser, as Netlify would.
-export async function mockIdentity(page, { email = 'debbie@example.com', password = 'correct-horse', roles = ['admin'] } = {}) {
+export async function mockIdentity(page, { email = 'debbie@example.com', password = 'correct-horse', roles = ['admin'], calls = [] } = {}) {
   const token = makeToken(email, roles);
   // On localhost the widget asks which Netlify site to use; point it at this one, as on the live site.
   await page.addInitScript((url) => { try { localStorage.setItem('netlifySiteURL', url); } catch (e) { /* ignore */ } }, 'http://localhost:8888');
@@ -31,6 +31,18 @@ export async function mockIdentity(page, { email = 'debbie@example.com', passwor
       }
       if (form.get('grant_type') === 'refresh_token') return route.fulfill({ json: { access_token: token, token_type: 'bearer', expires_in: 3600, refresh_token: 'refresh-' + email } });
       return route.fulfill({ status: 400, json: { error: 'invalid_grant', error_description: 'Invalid email or password' } });
+    }
+    const body = route.request().postData() || '';
+    calls.push({ method: route.request().method(), path, body });
+    const tokens = { access_token: token, token_type: 'bearer', expires_in: 3600, refresh_token: 'refresh-' + email };
+    // Email links: invite (with a password), confirmation and password recovery all go through /verify.
+    if (path === '/verify') {
+      const b = JSON.parse(body || '{}');
+      return /^(invite|confirm|recover)-ok/.test(b.token || '') ? route.fulfill({ json: tokens }) : route.fulfill({ status: 404, json: { msg: 'Token expired' } });
+    }
+    if (path === '/user' && route.request().method() === 'PUT') {
+      const b = JSON.parse(body || '{}');
+      return route.fulfill({ json: Object.assign({}, user, b.email_change_token ? { email } : {}) });
     }
     if (path === '/user') return route.fulfill({ json: user });
     if (path === '/logout') return route.fulfill({ status: 204, body: '' });
