@@ -1,26 +1,21 @@
 <!DOCTYPE html>
 <html lang="en-AU">
 <head>
+  <script>window.MH_PREVIEW = true;</script>
   <meta charset="UTF-8">
-  <script>
-    window.sentryOnLoad = function () {
-      Sentry.init({ environment: location.hostname.includes("localhost") ? "development" : "production" });
-    };
-  </script>
-  <script async src="https://js.sentry-cdn.com/3166fd799dc40d46aba21390b5c51fc3.min.js" crossorigin="anonymous"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- SEO Meta Tags -->
-  <title>Mirror House Melbourne | Artisan Homewares & Architectural Mirrors</title>
-  <meta name="description" content="Shop architectural floor mirrors, wavy statement wall mirrors and artisan homewares from Mirror House Melbourne. Brass frames, travertine stone and custom-crated fragile delivery.">
+  <title>Mirror House Melbourne | Architectural Floor & Wall Mirrors</title>
+  <meta name="description" content="Shop 2-metre arch, ornate baroque, timber box and statement wall mirrors from Mirror House Melbourne. Delivered across Melbourne in protective packaging, or free pick-up in Point Cook.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="http://localhost:3000/">
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="http://localhost:3000/">
-  <meta property="og:title" content="Mirror House Melbourne | Artisan Homewares & Architectural Mirrors">
-  <meta property="og:description" content="Statement architectural mirrors and artisan homewares from Mirror House Melbourne. Custom-crated fragile freight and white glove delivery options.">
+  <meta property="og:title" content="Mirror House Melbourne | Architectural Floor & Wall Mirrors">
+  <meta property="og:description" content="Statement architectural mirrors from Mirror House Melbourne. Delivered from Point Cook in protective boxes, or free pick-up by appointment.">
   <meta property="og:image" content="http://localhost:3000/images/og-image.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -28,8 +23,8 @@
 
   <!-- Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Mirror House Melbourne | Artisan Homewares & Architectural Mirrors">
-  <meta name="twitter:description" content="Architectural mirrors and homewares from Melbourne, designed for light, scale and calm.">
+  <meta name="twitter:title" content="Mirror House Melbourne | Architectural Floor & Wall Mirrors">
+  <meta name="twitter:description" content="Architectural mirrors from Melbourne, designed for light, scale and calm.">
   <meta name="twitter:image" content="http://localhost:3000/images/og-image.jpg">
 
   <!-- Schema.org JSON-LD (FAQ entries mirror the visible FAQ below, word for word) -->
@@ -41,12 +36,13 @@
         "@type": "Organization",
         "@id": "http://localhost:3000/#organization",
         "name": "Mirror House Melbourne",
+        "legalName": "Mirrorhousemelbourne",
+        "taxID": "50 417 829 779",
         "url": "http://localhost:3000/",
         "logo": "http://localhost:3000/images/og-image.jpg",
-        "sameAs": [
-          "https://instagram.com/mirrorhousemelbourne",
-          "https://pinterest.com/mirrorhousemelbourne"
-        ]
+        "email": "hello@mirrorhousemelbourne.com.au",
+        "telephone": "+61 413 173 705",
+        "address": { "@type": "PostalAddress", "addressLocality": "Point Cook", "addressRegion": "VIC", "postalCode": "3030", "addressCountry": "AU" }
       },
       {
         "@type": "WebSite",
@@ -63,17 +59,10 @@
             "name": "How are large floor mirrors delivered safely?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Every floor and wall mirror travels upright in a custom reinforced timber crate with foam corner guards and shock-absorbing blocks, carried by a dedicated fragile-freight courier. You'll get SMS tracking before dispatch."
+              "text": "Every floor and wall mirror is packed in a heavy-duty cardboard box with protective foam, carried by a dedicated fragile-freight courier. You'll get SMS tracking before dispatch."
             }
           },
-          {
-            "@type": "Question",
-            "name": "What is the Transit & Breakage Cover option?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "For a flat $12.50, selected at checkout, we send a priority replacement at no extra cost if your order arrives damaged. Just send us photos within 48 hours of delivery."
-            }
-          },
+          { "@type": "Question", "name": "What if my mirror arrives damaged?", "acceptedAnswer": { "@type": "Answer", "text": "Wherever possible, we check each mirror with you on delivery so we can confirm together that it has arrived in perfect condition. If anything isn't quite right, please let us know straight away (photos help) and we'll replace it promptly at no cost to you." } },
           {
             "@type": "Question",
             "name": "Is hanging hardware included, and how should I hang my mirror?",
@@ -82,15 +71,9 @@
               "text": "Yes. Wall mirrors come with D-rings or a heavy-gauge French cleat. For anything over 10kg, fix into wall studs or masonry, never plasterboard alone. If you're unsure, a licensed handyman can hang it in under an hour."
             }
           },
-          {
-            "@type": "Question",
-            "name": "Can I book White Glove delivery?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Yes. Choose White Glove at checkout and a two-person team will carry your mirror into the room of your choice, unpack it and take away all the crating."
-            }
-          },
-          {
+          { "@type": "Question", "name": "How much is delivery?", "acceptedAnswer": { "@type": "Answer", "text": "We deliver from our base in Point Cook. Delivery is charged by zone: Zone 1 (within about 15 km of Point Cook: Point Cook, Werribee, Werribee South, Hoppers Crossing, Truganina, Williams Landing, Laverton, Laverton North, Seabrook, Altona Meadows, Altona and Seaholm) $49; Zone 2 (about 15–30 km from Point Cook, including Tarneit, Wyndham Vale, Williamstown, Footscray, Sunshine, Caroline Springs, Essendon, Melbourne CBD, Port Melbourne and Albert Park) $79; Zone 3 (about 31–50 km from Point Cook, including Melton, St Albans, Broadmeadows, Craigieburn, Preston, Bundoora, Carlton, Richmond, Kew, Box Hill, Ringwood, South Melbourne, St Kilda, Brighton, Cheltenham, Mentone and Geelong) $109. For addresses more than 50 km away, we'll contact you with a delivery quote." } },
+      { "@type": "Question", "name": "Can I pick up my order?", "acceptedAnswer": { "@type": "Answer", "text": "Prefer to collect? Free pick-up is available from our Point Cook studio by appointment. We'll be in touch with the address and a time that suits once your order is confirmed." } },
+      {
             "@type": "Question",
             "name": "Which payment methods do you accept?",
             "acceptedAnswer": {
@@ -105,8 +88,8 @@
   </script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="/css/theme.css">
-  <link rel="preload" as="image" href="/images/hero.jpg">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="preload" as="image" href="images/hero.jpg">
 
   <!-- Page styles moved out of inline style="" attributes. Move into theme.css when convenient. -->
   <style>
@@ -121,7 +104,7 @@
       background-color: #EFE8DF;
       background-image:
         linear-gradient(90deg, rgba(246, 241, 234, 0.96) 0%, rgba(246, 241, 234, 0.88) 38%, rgba(246, 241, 234, 0) 68%),
-        url("/images/hero.jpg");
+        url("images/hero.jpg");
       background-size: cover;
       background-position: center right;
     }
@@ -131,7 +114,7 @@
       .hero-section {
         background-image:
           linear-gradient(180deg, rgba(246, 241, 234, 0.94) 0%, rgba(246, 241, 234, 0.9) 60%, rgba(246, 241, 234, 0.55) 100%),
-          url("/images/hero.jpg");
+          url("images/hero.jpg");
         background-position: 70% center;
       }
     }
@@ -192,35 +175,31 @@
 
   <!-- Top Announcement Bar -->
   <aside class="announcement-bar" aria-label="Store announcement">
-    <span id="announcement-text">Free fragile freight on orders over $150 · 30-day in-home trial</span>
+    <span id="announcement-text">Delivered from Point Cook · Delivery calculated at checkout</span>
     <span class="announcement-divider" aria-hidden="true">|</span>
-    <span>Use code <strong>WELCOME10</strong> for 10% off your first order</span>
+    <span>Launch offer: 10% off your first order with code <strong>WELCOME10</strong></span>
   </aside>
 
   <!-- Main Store Header -->
   <header class="site-header">
     <div class="container header-inner">
       <div class="brand-logo">
-        <a href="/" class="brand-title">MIRROR HOUSE</a>
-        <span class="brand-subtitle">Melbourne • Architectural Mirrors & Homewares</span>
+        <a href="index.html" class="brand-title">MIRROR HOUSE</a>
+        <span class="brand-subtitle">Melbourne • Architectural Mirrors</span>
       </div>
 
       <nav class="site-nav" aria-label="Primary">
         <ul class="nav-links">
-          <li><a href="#collection-section" class="nav-link active" aria-current="page">Shop All</a></li>
-          <li><a href="#curated-showcase" class="nav-link">Arch Mirrors</a></li>
+          <li><a href="index.html?collection=all#collection-section" class="nav-link active" aria-current="page">Shop All</a></li>
+          <li><a href="index.html?collection=arch" class="nav-link">Arch Mirrors</a></li>
+          <li><a href="index.html?collection=ornate" class="nav-link">Ornate Mirrors</a></li>
           <li><a href="#guarantee-section" class="nav-link">Delivery Promise</a></li>
-          <li><a href="#reviews-section" class="nav-link">Reviews</a></li>
           <li><a href="#faq-section" class="nav-link">Hanging & FAQ</a></li>
-          <li><a href="/visualiser.html" class="nav-link">Try in your room</a></li>
+          <li><a href="visualiser.html" class="nav-link">Try in your room</a></li>
         </ul>
       </nav>
 
       <div class="header-actions">
-        <a href="/admin-dashboard.html" class="admin-link-pill" title="Shopify-Style Admin Portal">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <span class="label">Shopify Admin</span>
-        </a>
 
         <!-- Cart Button with Live Counter -->
         <button class="action-btn open-cart-btn" aria-label="View shopping bag" aria-controls="cart-drawer" title="Shopping Bag">
@@ -241,17 +220,17 @@
   <section class="hero-section" aria-label="Featured">
     <div class="container">
       <div class="hero-content">
-        <div class="hero-tag">Brass Frames & Natural Travertine</div>
+        <div class="hero-tag">Arch, Ornate &amp; Statement Mirrors</div>
         <h1 class="hero-title">Sculptural Mirrors Made for Light, Scale & Calm.</h1>
         <p class="hero-desc">
-          Bring warmth and light into your home with full-length floor mirrors, fluid wavy wall pieces and natural travertine stoneware.
+          Bring light, scale and warmth into your home with 2-metre arch, ornate and timber floor mirrors, and striking statement wall mirrors.
         </p>
         <div class="hero-cta-group">
           <a href="#collection-section" class="btn btn-primary">
             Shop Statement Mirrors
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
-          <a href="/visualiser.html" class="btn btn-secondary">Try It in Your Room</a>
+          <a href="visualiser.html" class="btn btn-secondary">Try It in Your Room</a>
         </div>
       </div>
     </div>
@@ -267,7 +246,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
           </div>
           <div class="trust-info">
-            <h4>Custom Timber Crating</h4>
+            <h4>Protective Box Packing</h4>
             <p>Foam-cushioned, built for fragile freight</p>
           </div>
         </div>
@@ -276,8 +255,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
           </div>
           <div class="trust-info">
-            <h4>Breakage Cover</h4>
-            <p>Add $12.50 cover for a priority replacement</p>
+            <h4>Checked on Delivery</h4>
+            <p>Anything not perfect, replaced promptly</p>
           </div>
         </div>
         <div class="trust-item">
@@ -289,15 +268,6 @@
             <p>Cards, Apple Pay & Google Pay, no surcharge</p>
           </div>
         </div>
-        <div class="trust-item">
-          <div class="trust-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
-          </div>
-          <div class="trust-info">
-            <h4>30-Day In-Home Trial</h4>
-            <p>Live with it first, return it easily</p>
-          </div>
-        </div>
       </div>
     </div>
   </section>
@@ -307,7 +277,7 @@
     <div class="container">
       <div class="section-header">
         <span class="section-subtitle">The Collection</span>
-        <h2 class="section-title">Architectural Mirrors & Artisan Living</h2>
+        <h2 class="section-title">Architectural Floor & Wall Mirrors</h2>
         <p class="section-desc">Every piece is individually inspected and packed by hand before it leaves our Melbourne studio.</p>
       </div>
 
@@ -317,7 +287,7 @@
       <!-- Dynamic Product Cards Grid -->
       <div class="product-grid" id="products-grid" aria-live="polite"></div>
       <noscript>
-        <p class="noscript-note">Please turn on JavaScript to browse the collection, or email <a href="mailto:concierge@mirrorhousemelbourne.com.au">concierge@mirrorhousemelbourne.com.au</a>.</p>
+        <p class="noscript-note">Please turn on JavaScript to browse the collection, or email <a href="mailto:hello@mirrorhousemelbourne.com.au">hello@mirrorhousemelbourne.com.au</a>.</p>
       </noscript>
     </div>
   </section>
@@ -328,17 +298,26 @@
       <div class="curated-banner">
         <div class="curated-content">
           <span class="hero-tag curated-tag">Signature Piece</span>
-          <h2 class="curated-title">The Grand Royale Arch. 195cm of Brass-Framed Light.</h2>
+          <h2 class="curated-title">Make a Statement. 2-Metre Mirrors in Gold or Black.</h2>
           <p class="curated-copy">
-            5mm high-definition silvered glass in a slim brass frame, with heavy-duty anchor cleats fitted. Makes a small apartment feel twice the size, or anchors an open-plan loft.
+            A bold metal frame with elegant curved detailing adds style, light and depth to any space, creating a sophisticated focal point in modern and contemporary homes. Each mirror measures 200 cm high &times; 100 cm wide, and comes in a gold or black frame.
           </p>
-          <a href="/product.html?slug=grand-royale-arched-brass-floor-mirror" class="btn btn-primary">
-            View Details & Hanging Guide
+          <p class="curated-copy">
+            <strong>$350 each</strong> &middot; <strong>$700 for a set of two</strong>. Hung side by side, the pair forms a striking feature wall 200 cm &times; 200 cm, perfect for living rooms, entryways and bedrooms.
+          </p>
+          <div class="finish-switch" role="group" aria-label="Frame finish">
+            <button type="button" class="finish-btn is-active" data-finish="gold" aria-pressed="true"><span class="finish-dot finish-dot-gold" aria-hidden="true"></span>Gold</button>
+            <button type="button" class="finish-btn" data-finish="black" aria-pressed="false"><span class="finish-dot finish-dot-black" aria-hidden="true"></span>Black</button>
+          </div>
+          <a href="product.html?slug=statement-curve-mirror-gold" data-gold="product.html?slug=statement-curve-mirror-gold" data-black="product.html?slug=statement-curve-mirror-black" class="btn btn-primary curated-shop-link">
+            Shop This Mirror
           </a>
         </div>
-        <div>
-          <img src="/images/grand-royale-arch.jpg" width="1200" height="1500" loading="lazy" decoding="async"
-               alt="Tall arched brass-framed floor mirror leaning against a warm plaster wall beside a travertine plinth and ceramic vase" class="curated-img">
+        <div class="curated-gallery">
+          <img data-gold="images/signature-gold.jpg" data-black="images/signature-black.jpg" src="images/signature-gold.jpg" width="568" height="828" loading="lazy" decoding="async"
+               alt="Tall gold-framed rectangular mirror with intersecting curved detailing, leaning against a cream wall beside a timber sideboard and potted plant" class="curated-img">
+          <img data-gold="images/signature-gold-pair.jpg" data-black="images/signature-black-pair.jpg" src="images/signature-gold-pair.jpg" width="940" height="610" loading="lazy" decoding="async"
+               alt="Two gold-framed mirrors with curved detailing hung side by side as a feature wall in a bright living room" class="curated-img">
         </div>
       </div>
     </div>
@@ -348,12 +327,13 @@
   <section class="section" id="guarantee-section">
     <div class="container">
       <div class="guarantee-box">
-        <img src="/images/crating.jpg" width="1200" height="900" loading="lazy" decoding="async"
-             alt="Large mirror packed upright in a pine crate with foam corner guards and shock-absorbing blocks" class="guarantee-img">
         <div>
           <h2 class="guarantee-title">Our "Zero Cracked Glass" Delivery Promise</h2>
           <p class="guarantee-copy">
-            Large mirrors need careful handling. Every Mirror House piece travels in a double-walled timber crate with high-density foam shock blocks. For extra peace of mind, add <strong>Transit & Breakage Cover</strong> at checkout for $12.50 and we'll send a priority replacement if anything arrives damaged.
+            Large mirrors need careful handling. Every Mirror House piece is packed in a heavy-duty cardboard box, cushioned with protective foam.
+          </p>
+          <p class="guarantee-copy">
+            Where possible, we kindly ask that you open and check your mirror while the delivery team is with you, so together we can confirm it has arrived in perfect condition. If anything isn't quite right, please let us know straight away and we'll replace it promptly.
           </p>
         </div>
       </div>
@@ -364,46 +344,10 @@
   <section class="section" id="reviews-section">
     <div class="container">
       <div class="section-header">
-        <span class="section-subtitle">Real Homes & Stylists</span>
-        <h2 class="section-title">Loved by Architects & Stylists</h2>
-        <div class="rating-summary">
-          <strong><span aria-hidden="true">★★★★★</span> 4.96 / 5.00</strong> average rating across 420+ verified deliveries
-        </div>
-      </div>
-
-      <div class="review-grid">
-        <article class="review-card">
-          <div class="review-stars" role="img" aria-label="Rated 5 out of 5">★★★★★</div>
-          <h3 class="review-title">"Museum-quality craftsmanship"</h3>
-          <p class="review-body">
-            The Grand Royale arch mirror is extraordinary. The brass has a real, weighty depth that cheap aluminium coatings simply can't mimic. The courier carried it right into our lounge.
-          </p>
-          <p class="review-author">
-            Evelyn Sterling, Interior Designer, Melbourne <span class="review-verified">✓ Verified Buyer</span>
-          </p>
-        </article>
-
-        <article class="review-card">
-          <div class="review-stars" role="img" aria-label="Rated 5 out of 5">★★★★★</div>
-          <h3 class="review-title">"The wavy curves make everyone stop and stare"</h3>
-          <p class="review-body">
-            The Ondine mirror arrived in a solid timber crate without a scratch. It looks like a $1,200 gallery piece. The French cleat went straight onto a stud and it hasn't moved.
-          </p>
-          <p class="review-author">
-            Clara Delacroix, Sydney NSW <span class="review-verified">✓ Verified Buyer</span>
-          </p>
-        </article>
-
-        <article class="review-card">
-          <div class="review-stars" role="img" aria-label="Rated 5 out of 5">★★★★★</div>
-          <h3 class="review-title">"Hefty, genuine travertine"</h3>
-          <p class="review-body">
-            Real stone with natural pitted texture, not resin. The dimmer lets us set a warm amber glow at night, and it pairs beautifully with our travertine catch-all tray.
-          </p>
-          <p class="review-author">
-            Harrison T., Brisbane QLD <span class="review-verified">✓ Verified Buyer</span>
-          </p>
-        </article>
+        <span class="section-subtitle">Reviews</span>
+        <h2 class="section-title">Reviews Coming Soon</h2>
+        <p class="section-desc">We're a new Melbourne mirror studio, so we don't have customer reviews to share just yet. Once our first mirrors are delivered, genuine feedback from real customers will appear here.</p>
+        <p class="section-desc">In the meantime, every mirror is checked with you on delivery wherever possible, and anything that isn't perfect is replaced promptly. Questions? Email <a href="mailto:hello@mirrorhousemelbourne.com.au">hello@mirrorhousemelbourne.com.au</a> or call <a href="tel:+61413173705">0413 173 705</a> or <a href="tel:+61406224524">0406 224 524</a>.</p>
       </div>
     </div>
   </section>
@@ -419,12 +363,12 @@
       <div class="faq-list">
         <details class="faq-item">
           <summary>How are large floor mirrors delivered safely?</summary>
-          <p>Every floor and wall mirror travels upright in a custom reinforced timber crate with foam corner guards and shock-absorbing blocks, carried by a dedicated fragile-freight courier. You'll get SMS tracking before dispatch.</p>
+          <p>Every floor and wall mirror is packed in a heavy-duty cardboard box with protective foam, carried by a dedicated fragile-freight courier. You'll get SMS tracking before dispatch.</p>
         </details>
 
         <details class="faq-item">
-          <summary>What is the Transit & Breakage Cover option?</summary>
-          <p>For a flat $12.50, selected at checkout, we send a priority replacement at no extra cost if your order arrives damaged. Just send us photos within 48 hours of delivery.</p>
+          <summary>What if my mirror arrives damaged?</summary>
+          <p>Wherever possible, we check each mirror with you on delivery so we can confirm together that it has arrived in perfect condition. If anything isn't quite right, please let us know straight away (photos help) and we'll replace it promptly at no cost to you.</p>
         </details>
 
         <details class="faq-item">
@@ -433,8 +377,19 @@
         </details>
 
         <details class="faq-item">
-          <summary>Can I book White Glove delivery?</summary>
-          <p>Yes. Choose White Glove at checkout and a two-person team will carry your mirror into the room of your choice, unpack it and take away all the crating.</p>
+
+          <summary>How much is delivery?</summary>
+
+          <p>We deliver from our base in Point Cook. Delivery is charged by zone: Zone 1 (within about 15 km of Point Cook: Point Cook, Werribee, Werribee South, Hoppers Crossing, Truganina, Williams Landing, Laverton, Laverton North, Seabrook, Altona Meadows, Altona and Seaholm) $49; Zone 2 (about 15–30 km from Point Cook, including Tarneit, Wyndham Vale, Williamstown, Footscray, Sunshine, Caroline Springs, Essendon, Melbourne CBD, Port Melbourne and Albert Park) $79; Zone 3 (about 31–50 km from Point Cook, including Melton, St Albans, Broadmeadows, Craigieburn, Preston, Bundoora, Carlton, Richmond, Kew, Box Hill, Ringwood, South Melbourne, St Kilda, Brighton, Cheltenham, Mentone and Geelong) $109. For addresses more than 50 km away, we'll contact you with a delivery quote.</p>
+
+        </details>
+
+        <details class="faq-item">
+
+          <summary>Can I pick up my order?</summary>
+
+          <p>Prefer to collect? Free pick-up is available from our Point Cook studio by appointment. We'll be in touch with the address and a time that suits once your order is confirmed.</p>
+
         </details>
 
         <details class="faq-item">
@@ -457,7 +412,7 @@
 
     <!-- Free Shipping Progress Goal -->
     <div class="free-shipping-goal">
-      <div class="shipping-bar-text" id="shipping-progress-text" aria-live="polite">Add $150 for free fragile freight</div>
+      <div class="shipping-bar-text" id="shipping-progress-text" aria-live="polite">Delivery by postcode, or free pick-up in Point Cook</div>
       <div class="shipping-progress-track">
         <div class="shipping-progress-fill" id="shipping-progress-fill"></div>
       </div>
@@ -472,8 +427,8 @@
         <span class="drawer-subtotal-label">Subtotal</span>
         <span class="drawer-subtotal-val" id="drawer-subtotal">$0.00</span>
       </div>
-      <p class="drawer-tax-note">Shipping and optional breakage cover are calculated at checkout.</p>
-      <a href="/checkout.html" class="btn btn-primary drawer-checkout-btn" id="drawer-checkout-btn">
+      <p class="drawer-tax-note">Delivery is calculated at checkout by postcode.</p>
+      <a href="checkout.html" class="btn btn-primary drawer-checkout-btn" id="drawer-checkout-btn">
         Checkout Securely
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
@@ -496,33 +451,41 @@
         <div class="footer-col">
           <h3 class="footer-brand">MIRROR HOUSE MELBOURNE</h3>
           <p class="footer-about">
-            Statement architectural mirrors and artisan homewares from Melbourne, bringing light, scale and calm into Australian homes.
+            Statement architectural mirrors from Melbourne, bringing light, scale and calm into Australian homes.
           </p>
           <p class="footer-contact">
-            Studio & Warehouse: Melbourne, Victoria, Australia<br>
-            Email: <a href="mailto:concierge@mirrorhousemelbourne.com.au">concierge@mirrorhousemelbourne.com.au</a>
+            Point Cook, VIC 3030 &middot; Pick-up by appointment<br>
+            Phone: <a href="tel:+61413173705">0413 173 705</a> or <a href="tel:+61406224524">0406 224 524</a><br>
+            Email: <a href="mailto:hello@mirrorhousemelbourne.com.au">hello@mirrorhousemelbourne.com.au</a><br>
+            Hours: Mon&ndash;Sat, 9am&ndash;5pm<br>
+            We reply within one business day.
           </p>
         </div>
 
         <div class="footer-col">
           <h3>Collections</h3>
           <ul>
-            <li><a href="/?category=Floor+Mirrors">Architectural Floor Mirrors</a></li>
-            <li><a href="/?category=Wall+Mirrors">Organic & Wavy Wall Mirrors</a></li>
-            <li><a href="/?category=Lighting">Travertine Lighting</a></li>
-            <li><a href="/?category=Ceramics+%26+Vases">Hand-Thrown Ceramic Vases</a></li>
-            <li><a href="/?category=Tableware">Ribbed Amber Glassware</a></li>
+            <li><a href="index.html?collection=all#collection-section">Shop All Mirrors</a></li>
+            <li><a href="index.html?collection=arch">Arch Mirrors</a></li>
+            <li><a href="index.html?collection=ornate">Ornate &amp; Baroque Mirrors</a></li>
+            <li><a href="index.html?collection=timber">Timber Box Mirrors</a></li>
+            <li><a href="index.html?collection=wall">Statement &amp; Wavy Wall Mirrors</a></li>
+            <li><a href="index.html?collection=floor">Floor Mirrors</a></li>
+            <li><a href="index.html?collection=black">Black Mirrors</a></li>
+            <li><a href="index.html?collection=gold">Gold &amp; Champagne Mirrors</a></li>
           </ul>
         </div>
 
         <div class="footer-col">
           <h3>Customer Care</h3>
           <ul>
-            <li><a href="/checkout.html">Checkout & Postage</a></li>
+            <li><a href="checkout.html">Checkout & Postage</a></li>
+            <li><a href="policies.html#delivery">Delivery Policy</a></li>
+            <li><a href="policies.html#returns">Returns &amp; Refunds</a></li>
+            <li><a href="policies.html#care">Mirror Care</a></li>
+            <li><a href="policies.html#privacy">Privacy &amp; Cookies</a></li>
             <li><a href="#guarantee-section">Delivery Promise</a></li>
             <li><a href="#faq-section">Mirror Hanging Guide</a></li>
-            <li><a href="/admin-dashboard.html">Merchant Admin Portal</a></li>
-            <li><a href="/admin-dashboard.html">Business Dashboard</a></li>
           </ul>
         </div>
 
@@ -541,7 +504,7 @@
       </div>
 
       <div class="footer-bottom">
-        <div>© 2026 Mirror House Melbourne. All rights reserved.</div>
+        <div>© 2026 Mirrorhousemelbourne · ABN 50 417 829 779. All rights reserved.</div>
         <ul class="payment-badges" aria-label="Accepted payment methods">
           <li class="payment-badge-pill">Square</li>
           <li class="payment-badge-pill">Apple Pay</li>
@@ -555,7 +518,7 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="/js/store.js"></script>
+  <script src="js/store.js"></script>
   <script>
     // Newsletter: saves the address to D1 through the Worker (/api/newsletter).
     (function () {
@@ -571,15 +534,30 @@
           return;
         }
         status.textContent = 'Joining…';
-        fetch('/api/newsletter', {
+        var email = input.value.trim();
+        // Preview: saved to this browser's admin, so it shows in Admin > Mailing list.
+        var save = window.MH_PREVIEW ? Promise.resolve().then(function () {
+          var a = JSON.parse(localStorage.getItem('mh-admin-v1') || 'null');
+          var rec = { email: email, joinedAt: Date.now(), source: 'Website sign-up' }, same = function (x) { return String(x.email).toLowerCase() === email.toLowerCase(); };
+          if (a) {
+            a.subscribers = a.subscribers || [];
+            if (!a.subscribers.some(same)) a.subscribers.push(rec);
+            localStorage.setItem('mh-admin-v1', JSON.stringify(a));
+          } else { // admin not opened yet in this browser: keep it until it is
+            var q = JSON.parse(localStorage.getItem('mh-preview-subs') || '[]');
+            if (!q.some(same)) q.push(rec);
+            localStorage.setItem('mh-preview-subs', JSON.stringify(q));
+          }
+          return { ok: true, data: {} };
+        }) : fetch('/api/newsletter', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ email: input.value })
-        })
-          .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+          body: JSON.stringify({ email: email, source: 'Website sign-up' })
+        }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); });
+        save
           .then(function (r) {
             if (!r.ok) throw new Error(r.data.error || 'Could not sign you up.');
-            status.textContent = "You're on the list. Use code WELCOME10 for 10% off.";
+            status.textContent = "You're on the list! Check your inbox for your welcome email and WELCOME10 code for 10% off your first order.";
             form.reset();
           })
           .catch(function (err) {

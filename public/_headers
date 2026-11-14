@@ -1,3 +1,0 @@
-# Let the single-file version (opened from a computer or Claude) load photos from this site.
-/images/*
-  Access-Control-Allow-Origin: *

@@ -1,51 +1,42 @@
 <!DOCTYPE html>
 <html lang="en-AU">
 <head>
+  <script>window.MH_PREVIEW = true;</script>
   <meta charset="UTF-8">
-  <script>
-    window.sentryOnLoad = function () {
-      Sentry.init({ environment: location.hostname.includes("localhost") ? "development" : "production" });
-    };
-  </script>
-  <script async src="https://js.sentry-cdn.com/3166fd799dc40d46aba21390b5c51fc3.min.js" crossorigin="anonymous"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Mirror House Melbourne</title>
-  <meta name="description" content="Architectural mirrors and artisan homewares from Mirror House Melbourne.">
-  <link rel="stylesheet" href="/css/theme.css">
+  <meta name="description" content="Architectural mirrors from Mirror House Melbourne.">
+  <link rel="stylesheet" href="css/theme.css">
 </head>
 <body>
 
   <!-- Top Announcement Bar -->
   <aside class="announcement-bar" aria-label="Store announcement">
-    <span id="announcement-text">Free fragile freight on orders over $150 · 30-day in-home trial</span>
+    <span id="announcement-text">Delivered from Point Cook · Delivery calculated at checkout</span>
     <span class="announcement-divider" aria-hidden="true">|</span>
-    <span>Use code <strong>WELCOME10</strong> for 10% off your first order</span>
+    <span>Launch offer: 10% off your first order with code <strong>WELCOME10</strong></span>
   </aside>
 
   <!-- Main Store Header -->
   <header class="site-header">
     <div class="container header-inner">
       <div class="brand-logo">
-        <a href="/" class="brand-title">MIRROR HOUSE</a>
-        <span class="brand-subtitle">Melbourne • Architectural Mirrors & Homewares</span>
+        <a href="index.html" class="brand-title">MIRROR HOUSE</a>
+        <span class="brand-subtitle">Melbourne • Architectural Mirrors</span>
       </div>
 
       <nav class="site-nav" aria-label="Primary">
         <ul class="nav-links">
-          <li><a href="/#collection-section" class="nav-link">Shop All</a></li>
-          <li><a href="/#curated-showcase" class="nav-link">Arch Mirrors</a></li>
-          <li><a href="/#guarantee-section" class="nav-link">Delivery Promise</a></li>
-          <li><a href="/#reviews-section" class="nav-link">Reviews</a></li>
-          <li><a href="/#faq-section" class="nav-link">Hanging & FAQ</a></li>
-          <li><a href="/visualiser.html" class="nav-link">Try in your room</a></li>
+          <li><a href="index.html?collection=all#collection-section" class="nav-link">Shop All</a></li>
+          <li><a href="index.html?collection=arch" class="nav-link">Arch Mirrors</a></li>
+          <li><a href="index.html?collection=ornate" class="nav-link">Ornate Mirrors</a></li>
+          <li><a href="index.html#guarantee-section" class="nav-link">Delivery Promise</a></li>
+          <li><a href="index.html#faq-section" class="nav-link">Hanging & FAQ</a></li>
+          <li><a href="visualiser.html" class="nav-link">Try in your room</a></li>
         </ul>
       </nav>
 
       <div class="header-actions">
-        <a href="/admin-dashboard.html" class="admin-link-pill" title="Shopify-Style Admin Portal">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <span class="label">Shopify Admin</span>
-        </a>
 
         <!-- Cart Button with Live Counter -->
         <button class="action-btn open-cart-btn" aria-label="View shopping bag" aria-controls="cart-drawer" title="Shopping Bag">
@@ -63,9 +54,9 @@
   <main id="main">
     <section class="product-page">
       <div class="container">
-        <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/#collection-section">Collection</a><span aria-hidden="true">/</span><span id="crumb-name">Loading…</span></nav>
+        <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">/</span><a href="index.html#collection-section">Collection</a><span aria-hidden="true">/</span><span id="crumb-name">Loading…</span></nav>
         <div class="product-layout" id="product-detail"><p class="grid-note">Loading…</p></div>
-        <p class="drawer-tax-note" style="margin-top:32px"><a href="/visualiser.html">See it in your own room →</a></p>
+        <p class="drawer-tax-note" style="margin-top:32px"><a href="visualiser.html">See it in your own room →</a></p>
       </div>
     </section>
   </main>
@@ -78,33 +69,41 @@
         <div class="footer-col">
           <h3 class="footer-brand">MIRROR HOUSE MELBOURNE</h3>
           <p class="footer-about">
-            Statement architectural mirrors and artisan homewares from Melbourne, bringing light, scale and calm into Australian homes.
+            Statement architectural mirrors from Melbourne, bringing light, scale and calm into Australian homes.
           </p>
           <p class="footer-contact">
-            Studio & Warehouse: Melbourne, Victoria, Australia<br>
-            Email: <a href="mailto:concierge@mirrorhousemelbourne.com.au">concierge@mirrorhousemelbourne.com.au</a>
+            Point Cook, VIC 3030 &middot; Pick-up by appointment<br>
+            Phone: <a href="tel:+61413173705">0413 173 705</a> or <a href="tel:+61406224524">0406 224 524</a><br>
+            Email: <a href="mailto:hello@mirrorhousemelbourne.com.au">hello@mirrorhousemelbourne.com.au</a><br>
+            Hours: Mon&ndash;Sat, 9am&ndash;5pm<br>
+            We reply within one business day.
           </p>
         </div>
 
         <div class="footer-col">
           <h3>Collections</h3>
           <ul>
-            <li><a href="/?category=Floor+Mirrors">Architectural Floor Mirrors</a></li>
-            <li><a href="/?category=Wall+Mirrors">Organic & Wavy Wall Mirrors</a></li>
-            <li><a href="/?category=Lighting">Travertine Lighting</a></li>
-            <li><a href="/?category=Ceramics+%26+Vases">Hand-Thrown Ceramic Vases</a></li>
-            <li><a href="/?category=Tableware">Ribbed Amber Glassware</a></li>
+            <li><a href="index.html?collection=all#collection-section">Shop All Mirrors</a></li>
+            <li><a href="index.html?collection=arch">Arch Mirrors</a></li>
+            <li><a href="index.html?collection=ornate">Ornate &amp; Baroque Mirrors</a></li>
+            <li><a href="index.html?collection=timber">Timber Box Mirrors</a></li>
+            <li><a href="index.html?collection=wall">Statement &amp; Wavy Wall Mirrors</a></li>
+            <li><a href="index.html?collection=floor">Floor Mirrors</a></li>
+            <li><a href="index.html?collection=black">Black Mirrors</a></li>
+            <li><a href="index.html?collection=gold">Gold &amp; Champagne Mirrors</a></li>
           </ul>
         </div>
 
         <div class="footer-col">
           <h3>Customer Care</h3>
           <ul>
-            <li><a href="/checkout.html">Checkout & Postage</a></li>
-            <li><a href="/#guarantee-section">Delivery Promise</a></li>
-            <li><a href="/#faq-section">Mirror Hanging Guide</a></li>
-            <li><a href="/admin-dashboard.html">Merchant Admin Portal</a></li>
-            <li><a href="/admin-dashboard.html">Business Dashboard</a></li>
+            <li><a href="checkout.html">Checkout & Postage</a></li>
+            <li><a href="policies.html#delivery">Delivery Policy</a></li>
+            <li><a href="policies.html#returns">Returns &amp; Refunds</a></li>
+            <li><a href="policies.html#care">Mirror Care</a></li>
+            <li><a href="policies.html#privacy">Privacy &amp; Cookies</a></li>
+            <li><a href="index.html#guarantee-section">Delivery Promise</a></li>
+            <li><a href="index.html#faq-section">Mirror Hanging Guide</a></li>
           </ul>
         </div>
 
@@ -113,12 +112,12 @@
           <p class="footer-note">
             Get 10% off your first order and early access to new mirrors.
           </p>
-          <a class="btn btn-primary newsletter-btn" href="/#newsletter-form">Join on the home page</a>
+          <a class="btn btn-primary newsletter-btn" href="index.html#newsletter-form">Join on the home page</a>
         </div>
       </div>
 
       <div class="footer-bottom">
-        <div>© 2026 Mirror House Melbourne. All rights reserved.</div>
+        <div>© 2026 Mirrorhousemelbourne · ABN 50 417 829 779. All rights reserved.</div>
         <ul class="payment-badges" aria-label="Accepted payment methods">
           <li class="payment-badge-pill">Square</li>
           <li class="payment-badge-pill">Apple Pay</li>
@@ -131,6 +130,6 @@
     </div>
   </footer>
 
-  <script src="/js/store.js"></script>
+  <script src="js/store.js"></script>
 </body>
 </html>

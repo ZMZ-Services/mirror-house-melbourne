@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Emails | Mirror House Melbourne</title>
+  <meta name="robots" content="noindex">
+  <style>
+    :root { --bg: #EFEBE5; --ink: #1F1B17; --ink2: #5C554D; --line: #E2DBD1; --brass: #B8913F; --card: #FFFFFF; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif; }
+    .top { max-width: 960px; margin: 0 auto; padding: 28px 16px 8px; }
+    .top a { color: var(--ink2); font-size: 14px; }
+    h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 500; font-size: 32px; margin: 10px 0 6px; }
+    .lead { color: var(--ink2); margin: 0 0 16px; line-height: 1.5; max-width: 680px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 18px; }
+    .tabs button { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 999px; padding: 9px 14px; font: inherit; font-size: 14px; cursor: pointer; }
+    .tabs button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .meta { max-width: 600px; margin: 0 auto 10px; font-size: 13px; color: var(--ink2); background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; line-height: 1.5; }
+    .meta b { color: var(--ink); }
+    .mail { display: none; padding: 0 16px 48px; }
+    .mail.on { display: block; }
+    .note { max-width: 600px; margin: 14px auto 0; font-size: 13px; color: var(--ink2); line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <a href="index.html">← Back to the shop</a>
+    <h1>Customer emails</h1>
+    <p class="lead">What customers (and you) receive at each stage. The details are a made-up example order. These are previews only: emails start sending once an email service is connected on the live site.</p>
+    <div class="tabs" role="group" aria-label="Choose an email">
+      <button type="button" data-show="m1" aria-pressed="true">1. Order confirmation &amp; receipt</button>
+      <button type="button" data-show="m2" aria-pressed="false">2. New order alert (to you)</button>
+      <button type="button" data-show="m3" aria-pressed="false">3. Delivery day confirmed</button>
+      <button type="button" data-show="m4" aria-pressed="false">4. On its way</button>
+      <button type="button" data-show="m5" aria-pressed="false">5. Ready for pick-up</button>
+      <button type="button" data-show="m6" aria-pressed="false">6. Quote request received</button>
+      <button type="button" data-show="m7" aria-pressed="false">7. Your delivery quote</button>
+      <button type="button" data-show="m8" aria-pressed="false">8. Welcome to the mailing list</button>
+    </div>
+  </div>
+
+  <!-- 1 -->
+  <section class="mail on" id="m1">
+    <div class="meta"><b>When:</b> straight after payment · <b>To:</b> the customer · <b>Subject:</b> Your Mirror House order #1001 is confirmed</div>
+    <div class="tabs" role="group" aria-label="GST" style="max-width:600px;margin:0 auto 10px;"><button type="button" data-gst="0" aria-pressed="true">Not registered for GST</button><button type="button" data-gst="1" aria-pressed="false">Registered for GST</button></div>
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #E2DBD1;border-radius:6px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1F1B17;">
+      <div style="background:#1F1B17;color:#ffffff;text-align:center;padding:22px 16px;">
+        <div style="font-family:Georgia,serif;font-size:22px;letter-spacing:4px;">MIRROR HOUSE</div>
+        <div style="font-size:10px;letter-spacing:3px;color:#CDB68C;margin-top:4px;">MELBOURNE</div>
+      </div>
+      <div style="padding:28px 28px 8px;">
+        <p style="margin:0 0 6px;font-size:13px;color:#B8913F;letter-spacing:2px;text-transform:uppercase;">Order confirmed · <span class="doc-title">Receipt</span></p>
+        <h2 style="margin:0 0 12px;font-family:Georgia,serif;font-weight:normal;font-size:26px;">Thank you, Sarah</h2>
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#5C554D;">Your order is confirmed and paid. We'll be in touch within one business day to arrange your delivery day. This email is your <span class="doc-title-l">receipt</span>.</p>
+        <table role="presentation" width="100%" style="border-collapse:collapse;font-size:14px;margin:0 0 18px;">
+          <tr><td style="padding:4px 0;color:#5C554D;">Order number</td><td style="padding:4px 0;text-align:right;"><b>#1001</b></td></tr>
+          <tr><td style="padding:4px 0;color:#5C554D;">Order date</td><td style="padding:4px 0;text-align:right;">14 November 2026</td></tr>
+          <tr><td style="padding:4px 0;color:#5C554D;">Paid with</td><td style="padding:4px 0;text-align:right;">Visa ending 4242</td></tr>
+        </table>
+      </div>
+      <div style="padding:0 28px;">
+        <table role="presentation" width="100%" style="border-collapse:collapse;font-size:14px;">
+          <tr style="border-top:1px solid #E2DBD1;border-bottom:1px solid #E2DBD1;">
+            <td style="padding:14px 12px 14px 0;width:72px;vertical-align:top;"><img src="images/products/halo-arch-floor-mirror-black.jpg" alt="" width="64" style="display:block;border-radius:4px;"></td>
+            <td style="padding:14px 0;vertical-align:top;"><b>Halo Arch Floor Mirror</b><br><span style="color:#5C554D;">220 × 120 cm · Black · Qty 1</span></td>
+            <td style="padding:14px 0;text-align:right;vertical-align:top;">$420.00</td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" style="border-collapse:collapse;font-size:14px;margin:12px 0 0;">
+          <tr><td style="padding:4px 0;color:#5C554D;">Subtotal</td><td style="padding:4px 0;text-align:right;">$420.00</td></tr>
+          <tr><td style="padding:4px 0;color:#5C554D;">Discount (WELCOME10)</td><td style="padding:4px 0;text-align:right;">−$42.00</td></tr>
+          <tr><td style="padding:4px 0;color:#5C554D;">Delivery (Zone 1)</td><td style="padding:4px 0;text-align:right;">$49.00</td></tr>
+          <tr style="border-top:1px solid #E2DBD1;"><td style="padding:10px 0 2px;font-size:16px;"><b>Total paid</b></td><td style="padding:10px 0 2px;text-align:right;font-size:16px;"><b>$427.00 AUD</b></td></tr>
+          <tr class="gst-line" hidden><td colspan="2" style="padding:0 0 4px;font-size:12px;color:#5C554D;">Includes $38.82 GST</td></tr>
+        </table>
+      </div>
+      <div style="padding:18px 28px;">
+        <table role="presentation" width="100%" style="border-collapse:collapse;font-size:14px;background:#F6F2EC;border-radius:6px;">
+          <tr>
+            <td style="padding:14px;vertical-align:top;width:50%;"><b>Delivering to</b><br><span style="color:#5C554D;line-height:1.6;">Sarah Example<br>12 Example Street<br>Point Cook VIC 3030</span></td>
+            <td style="padding:14px;vertical-align:top;"><b>Delivery</b><br><span style="color:#5C554D;line-height:1.6;">Usually 1–4 business days. We'll SMS before dispatch.<br>Preferred day: Tue 17 Nov</span></td>
+          </tr>
+        </table>
+      </div>
+      <div style="padding:0 28px 22px;text-align:center;">
+        <a href="#" style="display:inline-block;background:#1F1B17;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:4px;font-size:13px;letter-spacing:2px;text-transform:uppercase;">View Square payment receipt</a>
+      </div>
+      <div style="padding:16px 28px;border-top:1px solid #E2DBD1;font-size:13px;color:#5C554D;line-height:1.6;">
+        <b style="color:#1F1B17;">When your mirror arrives</b><br>Please check it with our delivery team, or within 24 hours, and email photos of any damage to hello@mirrorhousemelbourne.com.au. See our <a href="policies.html" style="color:#8A6A2F;">delivery, returns &amp; care</a> policies.
+      </div>
+      <div style="background:#F6F2EC;padding:18px 28px;font-size:12px;color:#5C554D;line-height:1.6;text-align:center;">
+        Mirrorhousemelbourne · ABN 50 417 829 779<br>Point Cook VIC 3030 · 0413 173 705 · hello@mirrorhousemelbourne.com.au<br>Questions? Just reply to this email.
+      </div>
+    </div>
+    <p class="note">This follows the <b>Registered for GST</b> tick box in Admin → Settings. Not registered: it's a <b>Receipt</b> with no GST line. Registered: it becomes a <b>Tax invoice</b> showing the GST included. The price is the same final price either way. Square's own payment receipt is linked from the button, so customers have both.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="mail" id="m2">
+    <div class="meta"><b>When:</b> straight after payment · <b>To:</b> you (hello@mirrorhousemelbourne.com.au) · <b>Subject:</b> New order #1001: $427.00 from Sarah Example</div>
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #E2DBD1;border-radius:6px;padding:24px 28px;font-family:Arial,Helvetica,sans-serif;color:#1F1B17;font-size:14px;line-height:1.6;">
+      <p style="margin:0 0 4px;font-size:13px;color:#2E7D4F;"><b>● New paid order</b></p>
+      <h2 style="margin:0 0 12px;font-size:22px;">#1001 · $427.00</h2>
+      <p style="margin:0 0 12px;"><b>Sarah Example</b> · 0400 000 000 · sarah@example.com<br>12 Example Street, Point Cook VIC 3030 · <b>Zone 1 delivery</b> · preferred Tue 17 Nov</p>
+      <p style="margin:0 0 12px;">1 × Halo Arch Floor Mirror, 220 × 120 cm, Black · $420.00<br>Discount WELCOME10 −$42.00 · Delivery $49.00</p>
+      <p style="margin:0 0 16px;color:#5C554D;">Note from customer: "Stairs to the front door, 3 steps."</p>
+      <a href="admin-dashboard.html" style="display:inline-block;background:#1F1B17;color:#fff;text-decoration:none;padding:10px 18px;border-radius:4px;font-size:13px;">Open order in admin</a>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="mail" id="m3">
+    <div class="meta"><b>When:</b> you set the delivery day in the admin · <b>To:</b> the customer · <b>Subject:</b> Your mirror is booked for delivery on Tuesday 17 November</div>
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #E2DBD1;border-radius:6px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1F1B17;">
+      <div style="background:#1F1B17;color:#ffffff;text-align:center;padding:18px 16px;font-family:Georgia,serif;font-size:20px;letter-spacing:4px;">MIRROR HOUSE</div>
+      <div style="padding:28px;font-size:15px;line-height:1.6;">
+        <h2 style="margin:0 0 10px;font-family:Georgia,serif;font-weight:normal;font-size:24px;">Your delivery is booked</h2>
+        <p style="margin:0 0 14px;color:#5C554D;">Hi Sarah, your Halo Arch Floor Mirror (order #1001) will be delivered on:</p>
+        <p style="margin:0 0 16px;font-size:20px;"><b>Tuesday 17 November, between 9am and 1pm</b></p>
+        <p style="margin:0 0 6px;color:#5C554D;">To help it go smoothly:</p>
+        <ul style="margin:0 0 16px;padding-left:20px;color:#5C554D;">
+          <li>Someone needs to be home. If no one is home, a redelivery fee applies.</li>
+          <li>Please clear a path to where the mirror will go.</li>
+          <li>Where possible, check the mirror with our team when it arrives.</li>
+        </ul>
+        <p style="margin:0;color:#5C554D;">Need a different day? Reply to this email or call 0413 173 705.</p>
+      </div>
+      <div style="background:#F6F2EC;padding:14px 28px;font-size:12px;color:#5C554D;text-align:center;">Mirrorhousemelbourne · ABN 50 417 829 779 · hello@mirrorhousemelbourne.com.au</div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="mail" id="m4">
+    <div class="meta"><b>When:</b> you mark the order "Out for delivery" · <b>To:</b> the customer (email, plus an SMS if set up) · <b>Subject:</b> Your mirror is on its way</div>
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #E2DBD1;border-radius:6px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1F1B17;">
+      <div style="background:#1F1B17;color:#ffffff;text-align:center;padding:18px 16px;font-family:Georgia,serif;font-size:20px;letter-spacing:4px;">MIRROR HOUSE</div>
+      <div style="padding:28px;font-size:15px;line-height:1.6;">
+        <h2 style="margin:0 0 10px;font-family:Georgia,serif;font-weight:normal;font-size:24px;">Your mirror is on its way</h2>
+        <p style="margin:0 0 14px;color:#5C554D;">Hi Sarah, our team is heading to 12 Example Street, Point Cook today with your Halo Arch Floor Mirror (order #1001).</p>
+        <p style="margin:0 0 14px;color:#5C554D;"><b style="color:#1F1B17;">Please check it on arrival.</b> If anything isn't right, tell our team, or email photos within 24 hours to hello@mirrorhousemelbourne.com.au and we'll make it right.</p>
+        <p style="margin:0;color:#5C554D;">Hanging it? Always fix into studs or masonry. Our <a href="index.html#faq-section" style="color:#8A6A2F;">hanging guide</a> has the details.</p>
+      </div>
+      <div style="background:#F6F2EC;padding:14px 28px;font-size:12px;color:#5C554D;text-align:center;">Mirrorhousemelbourne · ABN 50 417 829 779 · 0413 173 705</div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="mail" id="m5">
+    <div class="meta"><b>When:</b> you mark a pick-up order "Ready" · <b>To:</b> the customer · <b>Subject:</b> Your mirror is ready to collect</div>
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #E2DBD1;border-radius:6px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1F1B17;">
+      <div style="background:#1F1B17;color:#ffffff;text-align:center;padding:18px 16px;font-family:Georgia,serif;font-size:20px;letter-spacing:4px;">MIRROR HOUSE</div>
+      <div style="padding:28px;font-size:15px;line-height:1.6;">
+        <h2 style="margin:0 0 10px;font-family:Georgia,serif;font-weight:normal;font-size:24px;">Ready for pick-up</h2>
+        <p style="margin:0 0 14px;color:#5C554D;">Hi Sarah, your order #1001 is ready to collect from our Point Cook studio.</p>
+        <table role="presentation" style="border-collapse:collapse;font-size:15px;margin:0 0 14px;background:#F6F2EC;border-radius:6px;width:100%;">
+          <tr><td style="padding:14px;"><b>Your pick-up time:</b> Saturday 21 November, 10am<br><b>Address:</b> sent to you by SMS<br><b>Bring:</b> your order number</td></tr>
+        </table>
+        <p style="margin:0;color:#5C554D;">A 200 cm mirror needs a large car, ute or van. Our team will help you load it. Need a different time? Reply to this email.</p>
+      </div>
+      <div style="background:#F6F2EC;padding:14px 28px;font-size:12px;color:#5C554D;text-align:center;">Mirrorhousemelbourne · ABN 50 417 829 779 · 0413 173 705</div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="mail" id="m6">
+    <div class="meta"><b>When:</b> a customer more than 50 km away places an order · <b>To:</b> the customer · <b>Subject:</b> We've received your order request #1002</div>
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #E2DBD1;border-radius:6px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1F1B17;">
+      <div style="background:#1F1B17;color:#ffffff;text-align:center;padding:18px 16px;font-family:Georgia,serif;font-size:20px;letter-spacing:4px;">MIRROR HOUSE</div>
+      <div style="padding:28px;font-size:15px;line-height:1.6;">
+        <h2 style="margin:0 0 10px;font-family:Georgia,serif;font-weight:normal;font-size:24px;">We're working out your delivery</h2>
+        <p style="margin:0 0 14px;color:#5C554D;">Hi James, thanks for your order request #1002 for a Versailles Ornate Mirror (220 × 110 cm, Gold). <b style="color:#1F1B17;">Nothing has been charged.</b></p>
+        <p style="margin:0 0 14px;color:#5C554D;">Your address in Ballarat is more than 50 km from Point Cook, so we'll arrange delivery and email you a price within one business day, with a secure link to pay for your mirror and delivery together.</p>
+        <p style="margin:0;color:#5C554D;">Prefer to collect? Reply and we'll switch it to free pick-up in Point Cook.</p>
+      </div>
+      <div style="background:#F6F2EC;padding:14px 28px;font-size:12px;color:#5C554D;text-align:center;">Mirrorhousemelbourne · ABN 50 417 829 779 · hello@mirrorhousemelbourne.com.au</div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="mail" id="m7">
+    <div class="meta"><b>When:</b> you press "Send quote" in the admin · <b>To:</b> the customer · <b>Subject:</b> Your delivery quote for order #1002</div>
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #E2DBD1;border-radius:6px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1F1B17;">
+      <div style="background:#1F1B17;color:#ffffff;text-align:center;padding:18px 16px;font-family:Georgia,serif;font-size:20px;letter-spacing:4px;">MIRROR HOUSE</div>
+      <div style="padding:28px;font-size:15px;line-height:1.6;">
+        <h2 style="margin:0 0 10px;font-family:Georgia,serif;font-weight:normal;font-size:24px;">Your delivery quote</h2>
+        <p style="margin:0 0 14px;color:#5C554D;">Hi James, here's the full price for order #1002, delivered to Ballarat VIC 3350:</p>
+        <table role="presentation" width="100%" style="border-collapse:collapse;font-size:14px;margin:0 0 16px;">
+          <tr><td style="padding:4px 0;color:#5C554D;">Versailles Ornate Mirror, 220 × 110 cm, Gold</td><td style="padding:4px 0;text-align:right;">$340.00</td></tr>
+          <tr><td style="padding:4px 0;color:#5C554D;">Delivery to Ballarat</td><td style="padding:4px 0;text-align:right;">$165.00</td></tr>
+          <tr style="border-top:1px solid #E2DBD1;"><td style="padding:10px 0 0;"><b>Total</b></td><td style="padding:10px 0 0;text-align:right;"><b>$505.00 AUD</b></td></tr>
+        </table>
+        <p style="text-align:center;margin:0 0 16px;"><a href="#" style="display:inline-block;background:#1F1B17;color:#ffffff;text-decoration:none;padding:13px 24px;border-radius:4px;font-size:13px;letter-spacing:2px;text-transform:uppercase;">Pay securely with Square</a></p>
+        <p style="margin:0;color:#5C554D;font-size:14px;">This quote is held for 7 days. Once you've paid, you'll get your order confirmation and receipt straight away, and we'll be in touch to book your delivery.</p>
+      </div>
+      <div style="background:#F6F2EC;padding:14px 28px;font-size:12px;color:#5C554D;text-align:center;">Mirrorhousemelbourne · ABN 50 417 829 779 · hello@mirrorhousemelbourne.com.au</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="mail" id="m8">
+    <div class="meta"><b>When:</b> automatically, the moment someone joins your mailing list · <b>To:</b> the new subscriber · <b>Subject:</b> Welcome to Mirror House, here's 10% off</div>
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #E2DBD1;border-radius:6px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1F1B17;">
+      <div style="background:#1F1B17;color:#ffffff;text-align:center;padding:22px 16px;">
+        <div style="font-family:Georgia,serif;font-size:22px;letter-spacing:4px;">MIRROR HOUSE</div>
+        <div style="font-size:10px;letter-spacing:3px;color:#CDB68C;margin-top:4px;">MELBOURNE</div>
+      </div>
+      <img src="images/products/versailles-ornate-mirror-gold.jpg" alt="" style="display:block;width:100%;max-height:320px;object-fit:cover;">
+      <div style="padding:28px;font-size:15px;line-height:1.6;text-align:center;">
+        <h2 style="margin:0 0 10px;font-family:Georgia,serif;font-weight:normal;font-size:26px;">Welcome to Mirror House</h2>
+        <p style="margin:0 0 18px;color:#5C554D;">Thanks for joining us. You'll be first to hear about new mirrors, restocks and offers. To say hello, here's 10% off your first order:</p>
+        <div style="display:inline-block;border:2px dashed #B8913F;padding:12px 26px;font-size:22px;letter-spacing:4px;margin:0 0 18px;"><b>WELCOME10</b></div>
+        <p style="margin:0 0 20px;color:#5C554D;font-size:14px;">Enter it at checkout. One use per customer, on your first order.</p>
+        <a href="index.html" style="display:inline-block;background:#1F1B17;color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:4px;font-size:13px;letter-spacing:2px;text-transform:uppercase;">Shop the collection</a>
+        <p style="margin:22px 0 0;color:#5C554D;font-size:14px;">Not sure what size suits your space? Try any mirror on your own walls with <a href="visualiser.html" style="color:#8A6A2F;">Try It in Your Room</a>.</p>
+      </div>
+      <div style="background:#F6F2EC;padding:16px 28px;font-size:12px;color:#5C554D;line-height:1.6;text-align:center;">
+        Mirrorhousemelbourne · ABN 50 417 829 779 · Point Cook VIC 3030<br>You're receiving this because you joined our mailing list at mirrorhousemelbourne.com.au.<br><a href="#" style="color:#5C554D;">Unsubscribe</a>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    document.querySelector('.tabs').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-show]'); if (!b) return;
+      document.querySelectorAll('[data-show]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      document.querySelectorAll('.mail').forEach(function (m) { m.classList.toggle('on', m.id === b.getAttribute('data-show')); });
+    });
+    document.querySelector('[aria-label="GST"]').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-gst]'); if (!b) return; var on = b.getAttribute('data-gst') === '1';
+      document.querySelectorAll('[data-gst]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      document.querySelectorAll('.doc-title').forEach(function (x) { x.textContent = on ? 'Tax invoice' : 'Receipt'; });
+      document.querySelectorAll('.doc-title-l').forEach(function (x) { x.textContent = on ? 'tax invoice' : 'receipt'; });
+      document.querySelectorAll('.gst-line').forEach(function (x) { x.hidden = !on; });
+    });
+    document.querySelectorAll('.mail a[href="#"]').forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); }); });
+  </script>
+</body>
+</html>
