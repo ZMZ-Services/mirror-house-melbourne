@@ -106,7 +106,7 @@
         '<span class="help">To ' + esc(o.address ? o.address.suburb + ' VIC ' + o.address.postcode : 'the customer') + ' · mirrors ' + money(o.subtotal - o.discount) + '</span></div>' +
         '<div class="field"><label for="q-msg">Message to the customer (optional)</label><textarea id="q-msg" rows="3" placeholder="e.g. We can deliver on Saturdays to Ballarat."></textarea></div>' +
         '<div class="card" style="box-shadow:none;border:1px solid #e3e3e3"><strong>What ' + esc(o.customer.name.split(' ')[0]) + ' receives</strong><p class="card-sub small" id="q-preview"></p></div>' +
-        '<p class="help small muted">' + (o.sample || o.test ? 'Preview: no email is sent.' : 'Sent by email with a secure Square payment link once your developer connects Square.') + '</p>',
+        '<p class="help small muted">' + 'Sent by email with a secure Square payment link for the mirror and delivery together. When they pay, the order is confirmed automatically.' + '</p>',
       onOpen: function (f) {
         var amt = f.querySelector('#q-amt'), pv = f.querySelector('#q-preview');
         function draw() { var c = Math.round((parseFloat(amt.value) || 0) * 100); pv.textContent = 'Delivery to ' + (o.address ? o.address.suburb : 'you') + ': ' + money(c) + '. Total to pay: ' + money(o.subtotal - o.discount + c) + ' (mirror and delivery). Pay securely with Square. Your mirror is held for 7 days.'; }
@@ -117,6 +117,7 @@
         if (!(c >= 0) || isNaN(c)) { f.querySelector('#q-amt').setCustomValidity('Enter the delivery price'); f.querySelector('#q-amt').reportValidity(); return false; }
         o.delivery = c; o.total = o.subtotal - o.discount + c; o.payment = 'quote_sent'; o.card = 'Square payment link sent';
         var m = f.querySelector('#q-msg').value.trim();
+        o._quoteMessage = m; // for the email; not kept on the order
         addEvent(o, 'Delivery quote of ' + money(c) + ' sent to ' + o.customer.email + ' (total ' + money(o.total) + ')' + (m ? ': "' + m + '"' : '') + (o.sample || o.test ? ' (preview: not sent)' : ''));
         D.save(); A.toast('Quote sent'); A.render();
       } });
@@ -203,7 +204,7 @@
     if (to === 'delivered') body = '<label class="check"><input type="checkbox" id="m-checked" checked><span>Mirror checked with the customer on delivery</span></label>';
     if (to === 'picked_up') body = '<label class="check"><input type="checkbox" id="m-checked" checked><span>Mirror checked with the customer at pick-up</span></label>';
     body += '<label class="check"><input type="checkbox" id="m-notify" checked><span>Email ' + esc(o.customer.name.split(' ')[0]) + ' an update</span></label>' +
-      '<p class="help small muted">' + (o.sample ? 'Sample order, so no email is sent.' : 'Emails are sent once your developer connects order emails.') + '</p>';
+      '<p class="help small muted">' + 'The email goes out as soon as you save.' + '</p>';
     A.modal({ title: labels[to] + ' · ' + o.number, body: body, submit: labels[to], onSubmit: function (f) {
       var track = f.querySelector('#m-track'), when = f.querySelector('#m-when'), checked = f.querySelector('#m-checked');
       o.fulfilment = to;
@@ -212,7 +213,7 @@
         delivered: 'Delivered' + (checked && checked.checked ? ' and checked with customer' : ''), ready: 'Marked ready for pick-up' + (track && track.value.trim() ? ' (' + track.value.trim() + ')' : ''),
         picked_up: 'Picked up by customer' + (checked && checked.checked ? ', checked together' : '') }[to];
       addEvent(o, text);
-      if (f.querySelector('#m-notify').checked) addEvent(o, 'Update email to ' + o.customer.email + (o.sample ? ' (not sent: sample order)' : ' queued'));
+      if (f.querySelector('#m-notify').checked) o._notify = to; // the server sends the email and notes it on the timeline
       D.save(); A.toast(labels[to].replace('Mark as ', 'Marked ').replace('Mark ', 'Marked ')); A.render();
     } });
   }
@@ -226,13 +227,14 @@
       body: '<div class="field"><label for="m-amt">Refund amount</label><div class="input-affix"><span>$</span><input id="m-amt" inputmode="decimal" value="' + (o.total / 100).toFixed(2) + '"></div><span class="help">Up to ' + money(o.total) + '. Refunds go back to the customer\'s card through Square.</span></div>' +
         '<div class="field"><label for="m-why">Reason (for your records)</label><input id="m-why" placeholder="e.g. Damaged on arrival"></div>' +
         '<label class="check"><input type="checkbox" id="m-restock"><span>Put items back in stock</span></label>' +
-        '<p class="help small muted">In this preview nothing is charged or refunded. On the live site this button asks Square to make the refund.</p>',
+        '<p class="help small muted">This asks Square to refund the customer\'s card straight away.</p>',
       onSubmit: function (f) {
         var amt = Math.round(parseFloat(f.querySelector('#m-amt').value.replace(/[^0-9.]/g, '')) * 100);
         if (!(amt > 0) || amt > o.total) { f.querySelector('#m-amt').setCustomValidity('Enter an amount up to ' + money(o.total)); f.querySelector('#m-amt').reportValidity(); return false; }
         o.payment = amt >= o.total ? 'refunded' : 'partially_refunded';
         o.refunded = amt;
         var why = f.querySelector('#m-why').value.trim();
+        o._refundReason = why;
         addEvent(o, 'Refunded ' + money(amt) + (why ? ' (' + why + ')' : ''));
         if (f.querySelector('#m-restock').checked) {
           o.lines.forEach(function (l) { var p = D.load().products.filter(function (x) { return x.slug === l.slug; })[0]; if (p && p.stock != null) p.stock += l.qty; });

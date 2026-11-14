@@ -213,31 +213,27 @@
   // ---------- settings ----------
   function renderSettings(main) {
     var s = D.load(), st = s.settings;
+    var live = s.integrations || {};
     var integ = [
-      ['Sq', 'Square payments', 'Takes card, Apple Pay and Google Pay payments and refunds. Needs your Square Application ID, Location ID and an access token added on the server by your developer.', 'Not connected'],
+      ['Sq', 'Square payments', 'Takes card payments at checkout, refunds from an order, and payment links for delivery quotes. Keys are set on the server (Netlify environment variables).', live.square || 'Not connected'],
       ['GA', 'Google Analytics 4', 'Counts visitors, where they came from and what they viewed, added to bag and bought. Add your Measurement ID below.', st.gaId ? 'Connected: ' + st.gaId : 'Not connected'],
-      ['G', 'Google Search Console', 'Shows how your shop appears in Google search and which searches bring visitors. Verify your domain and submit your sitemap.', 'Not connected'],
-      ['CF', 'Cloudflare Access', 'Locks this admin to your email address on the live site, with a one-time code each time you sign in.', 'Required for launch'],
-      ['@', 'Order emails', 'Sends order confirmations and delivery updates to customers, and a new-order alert to you.', 'Not connected']
+      ['G', 'Google Search Console', 'Shows how your shop appears in Google search and which searches bring visitors. Verify your domain and submit your sitemap (/sitemap.xml).', 'Not connected'],
+      ['ID', 'Admin sign-in', 'Netlify Identity: only people invited with the admin role can open this admin. You\'re signed out after 30 minutes without activity.', live.identity || 'Connected'],
+      ['@', 'Order emails', 'Sends order confirmations, quotes and delivery updates to customers, a welcome email to new subscribers, and a new-order alert to you.', live.email || 'Not connected']
     ];
     main.innerHTML = '<div class="page"><div class="page-head"><h1>Settings</h1></div>' +
       '<form class="card" id="f-store"><h2>Store details</h2><div class="form-grid">' +
       [['st-name', 'Store name', st.storeName], ['st-legal', 'Registered business name', st.legalName || 'Mirrorhousemelbourne'], ['st-email', 'Contact email', st.email], ['st-p1', 'Phone', st.phone1], ['st-p2', 'Second phone', st.phone2], ['st-addr', 'Address', st.address], ['st-abn', 'ABN', st.abn], ['st-hours', 'Opening hours', st.hours]].map(function (f) {
         return '<div class="field"><label for="' + f[0] + '">' + f[1] + '</label><input id="' + f[0] + '" value="' + esc(f[2]) + '"' + (f[0] === 'st-abn' ? ' inputmode="numeric" placeholder="11 digits" maxlength="14"' : '') + '></div>';
       }).join('') + '</div><label class="check" style="display:flex;gap:10px;align-items:flex-start;margin:4px 0"><input type="checkbox" id="st-gst"' + (st.gstRegistered ? ' checked' : '') + ' style="margin-top:3px"><span><strong>Registered for GST</strong><br><span class="card-sub small">Tick once you\'ve registered for GST with the ATO. Receipts then become <b>Tax invoices</b> showing the GST included, and checkout shows the GST amount. Your prices don\'t change: the price customers see is always the final price.</span></span></label><p class="card-sub small">Your registered business name and ABN appear on packing slips, receipts and in the shop footer.</p><button type="submit" class="btn primary" style="justify-self:end">Save</button></form>' +
-      '<form class="card" id="f-pass"><h2>Admin password</h2><div class="form-grid"><div class="field"><label for="pw-old">Current password</label><input id="pw-old" type="password" autocomplete="current-password"></div>' +
-      '<div class="field"><label for="pw-new">New password</label><input id="pw-new" type="password" autocomplete="new-password" minlength="8"></div></div>' +
-      '<p class="card-sub small">You\'re signed out automatically after 30 minutes without activity.</p><p class="form-msg small" id="pw-msg" role="status"></p><button type="submit" class="btn primary" style="justify-self:end">Change password</button></form>' +
       '<form class="card" id="f-ga"><h2>Google Analytics</h2><div class="form-grid"><div class="field"><label for="ga-id">Measurement ID</label><input id="ga-id" placeholder="G-XXXXXXXXXX" autocapitalize="characters" spellcheck="false" value="' + esc(st.gaId || '') + '"><span class="help">In Google Analytics: Admin → Data streams → your website → Measurement ID.</span></div></div>' +
-      '<p class="card-sub small">Once saved, the shop tracks visits, product views, add to bag, checkout, purchases, quote requests and Try It in Your Room. Data starts from the day it\'s connected. Your Analytics page here shows sales now; visitor numbers appear here once your developer links Google Analytics to the admin (you can always see them at analytics.google.com).</p>' +
+      '<p class="card-sub small">Once saved, the shop tracks visits, product views, add to bag, checkout, purchases, quote requests and Try It in Your Room. Data starts from the day it\'s connected. Your Analytics page here shows sales now; visitor numbers in this admin are counted by the shop itself (you can always see them at analytics.google.com).</p>' +
       '<p class="form-msg small" id="ga-msg" role="status"></p><button type="submit" class="btn primary" style="justify-self:end">Save</button></form>' +
       '<section class="card"><h2>Connections</h2>' + integ.map(function (x) {
         return '<div class="integ"><span class="integ-ico">' + esc(x[0]) + '</span><div><strong>' + esc(x[1]) + '</strong><p class="card-sub small">' + esc(x[2]) + '</p></div><span class="badge ' + (x[3] === 'Required for launch' ? 'warn' : '') + '">' + esc(x[3]) + '</span></div>';
       }).join('') + '</section>' +
-      '<section class="card"><h2>Preview data</h2><p class="card-sub">Everything in this preview admin is saved in this browser only.</p><div style="display:flex;gap:8px;flex-wrap:wrap">' +
-      '<button type="button" class="btn" id="export-all">Download a backup (JSON)</button>' +
-      (s.sampleData ? '<button type="button" class="btn" id="clear-sample">Remove sample orders and visitor data</button>' : '') +
-      '<button type="button" class="btn danger" id="reset-all">Reset preview to start</button></div></section></div>';
+      '<section class="card"><h2>Backup</h2><p class="card-sub">Everything in this admin is saved in your store\'s database. You can also download a copy.</p><div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button type="button" class="btn" id="export-all">Download a backup (JSON)</button></div></section></div>';
     $('#f-store').addEventListener('submit', function (e) {
       e.preventDefault();
       var abn = $('#st-abn').value.replace(/\s/g, '');
@@ -252,27 +248,10 @@
       if (v && !/^G-[A-Z0-9]{4,}$/.test(v)) { msg.textContent = 'That doesn\'t look like a Measurement ID. It starts with G-, for example G-AB12CD34EF.'; return; }
       st.gaId = v; msg.textContent = ''; D.save(); A.toast(v ? 'Google Analytics connected' : 'Google Analytics removed'); A.render();
     });
-    $('#f-pass').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var rec = A.authRecord(), msg = $('#pw-msg'), np = $('#pw-new').value;
-      if (np.length < 8) { msg.textContent = 'Use at least 8 characters.'; return; }
-      A.hashPass($('#pw-old').value, rec.salt).then(function (h) {
-        if (h !== rec.hash) { msg.textContent = 'Your current password isn\'t right.'; return; }
-        return A.hashPass(np, rec.salt).then(function (nh) { A.setAuth({ salt: rec.salt, hash: nh }); msg.textContent = ''; e.target.reset(); A.toast('Password changed'); });
-      });
-    });
     $('#export-all').addEventListener('click', function () {
       var a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([JSON.stringify(D.load(), null, 2)], { type: 'application/json' }));
       a.download = 'mirror-house-admin-backup.json'; document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 300);
-    });
-    if ($('#clear-sample')) $('#clear-sample').addEventListener('click', function () {
-      A.modal({ title: 'Remove sample data?', danger: true, submit: 'Remove sample data', body: '<p>This removes the sample orders, customers and visitor numbers, so the admin shows only real activity. Your products, shipping, discounts and settings stay.</p>',
-        onSubmit: function () { D.clearSample(); A.toast('Sample data removed'); A.go('#/'); } });
-    });
-    $('#reset-all').addEventListener('click', function () {
-      A.modal({ title: 'Reset the preview?', danger: true, submit: 'Reset', body: '<p>This puts products, shipping, discounts and settings back to the Mirror House set-up and clears any test orders. Your password stays.</p>',
-        onSubmit: function () { D.reset(); A.toast('Preview reset'); A.go('#/'); A.render(); } });
     });
   }
 

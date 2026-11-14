@@ -1,20 +1,16 @@
 // Mirror House Melbourne storefront: catalogue, quick view, bag, product page and checkout.
-// Products come from the Worker (/api/products). If the API isn't reachable (a static preview),
-// the built-in catalogue below is used so the shop still renders.
+// Live prices, stock, names and photos come from the store's database (/api/products, a Netlify Function).
+// If it isn't reachable, the built-in catalogue below is used so the shop still renders.
 (function () {
   'use strict';
 
-  // Keep in line with src/worker.js.
+  // Keep in line with netlify/lib/pricing.mjs (SHOP_CATEGORIES).
   // Categories shown in the shop. Add 'Lighting', 'Ceramics & Vases' or 'Tableware' back here to show those products again.
   var SHOW_CATEGORIES = ['Floor Mirrors', 'Wall Mirrors'];
   // Products no longer sold. Hidden even if they're still in the database.
   var HIDDEN_PRODUCTS = ['grand-royale-arched-brass-floor-mirror', 'ondine-wavy-wall-mirror'];
-  // Discount codes. Set "expires" (YYYY-MM-DD) once the launch date is known.
-  // The server (src/worker.js) must also check codes, first-order rules and expiry before charging.
-  var PROMO_CODES = { WELCOME10: { pct: 10, firstOrderOnly: true, expires: null, label: '10% off your first order' } };
+  // Discount codes are set in the admin (Discounts) and checked on the server when an order is placed.
   var FREE_FREIGHT_FROM = 15000;
-  var FLAT_FREIGHT = 2995;
-  var BREAKAGE_COVER = 1250;
   var PREVIEW = !!window.MH_PREVIEW;
 
   // ---------- Google Analytics 4 ----------
@@ -41,7 +37,34 @@
     if (PREVIEW) { try { return !!(((JSON.parse(localStorage.getItem('mh-admin-v1') || 'null') || {}).settings || {}).gstRegistered); } catch (e) { return false; } }
     return false;
   }
-  function track(name, params) { try { if (GA_ID && window.gtag) window.gtag('event', name, params || {}); } catch (e) { /* never break the shop */ } }
+  function track(name, params) {
+    try { if (GA_ID && window.gtag) window.gtag('event', name, params || {}); } catch (e) { /* never break the shop */ }
+    var own = { view_item: 'view_item', add_to_cart: 'add_to_cart', begin_checkout: 'begin_checkout', try_in_your_room_open: 'try_in_your_room' }[name];
+    if (own) visit(own, params && params.items && params.items[0] ? params.items[0].item_id : '');
+  }
+  // Visit counting for the admin's Analytics page (live site only). No cookies: a random id for this tab's visit
+  // and a random id for this browser, sent with the page and where the visit came from.
+  function rid() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2, 12); }
+  var VISIT = (function () {
+    var v = { sid: '', vid: '', nv: false };
+    try {
+      v.sid = sessionStorage.getItem('mh-visit') || ''; if (!v.sid) { v.sid = rid(); sessionStorage.setItem('mh-visit', v.sid); v.first = true; }
+      v.vid = localStorage.getItem('mh-visitor') || ''; if (!v.vid) { v.vid = rid(); localStorage.setItem('mh-visitor', v.vid); v.nv = true; }
+    } catch (e) { v.sid = v.sid || rid(); v.vid = v.vid || rid(); }
+    return v;
+  })();
+  function visit(type, item) {
+    if (PREVIEW) return;
+    try {
+      var slug = /[?&]slug=([a-z0-9-]+)/.exec(location.search);
+      var body = { sid: VISIT.sid, vid: VISIT.vid, nv: VISIT.nv, type: type, path: location.pathname + (slug ? '?slug=' + slug[1] : ''), item: item || '' };
+      if (type === 'page_view' && VISIT.first) { body.ref = document.referrer || ''; body.utm = (/[?&]utm_source=([^&]+)/.exec(location.search) || [])[1] || ''; }
+      var data = JSON.stringify(body);
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/track', new Blob([data], { type: 'text/plain' }));
+      else fetch('/api/track', { method: 'POST', body: data, keepalive: true }).catch(function () {});
+    } catch (e) { /* never break the shop */ }
+  }
+  visit('page_view');
   function gaItem(p, qty) { return { item_id: p.slug, item_name: p.name, item_category: p.category, item_variant: p.colour || undefined, price: (p.price_cents || 0) / 100, quantity: qty || 1 }; }
   if (/visualiser/.test(location.pathname)) track('try_in_your_room_open');
   var IMG = window.MH_IMAGES || {};
@@ -484,7 +507,7 @@
     }))
       .then(function (data) {
         if (!data || !Array.isArray(data.products) || !data.products.length) return fallback;
-        var list = data.products.map(function (p) { return Object.assign({}, META[p.slug] || { desc: '', specs: [] }, p); });
+        var list = data.products.map(function (p) { useServerPhotos(p); return Object.assign({}, META[p.slug] || { desc: '', specs: [] }, p); });
         // Products listed in CATALOGUE but not yet in the database (e.g. new mirrors) are still shown.
         // Add them to the database too, or orders for them will be refused by the server.
         var extras = CATALOGUE.filter(function (p) { return !bySlug(list, p.slug); }).map(function (p) { return Object.assign({ in_stock: 1 }, p); });
@@ -511,6 +534,14 @@
         return list;
       });
     return productsPromise;
+  }
+  // Photos set in the admin: the first is the main photo; captions are kept for photos the shop already had.
+  function useServerPhotos(p) {
+    if (!p || !Array.isArray(p.images) || !p.images.length) return;
+    var old = {}; (GALLERY[p.slug] || []).forEach(function (g) { old[g[0]] = g[1]; });
+    IMG[p.slug] = p.images[0];
+    if (p.images.length > 1) GALLERY[p.slug] = p.images.map(function (src, i) { return [src, old[src] || (p.name + ', photo ' + (i + 1))]; });
+    else delete GALLERY[p.slug];
   }
   var SOLD_OUT = {}, STOCK = {};
   function maxQty(slug) { return STOCK[slug] != null ? Math.min(20, STOCK[slug]) : 20; }
@@ -986,7 +1017,7 @@
       var quote = !pickup && !!(z && z.quote);
       $('#co-quote-box').hidden = !quote;
       $('#co-pay-panel').hidden = quote;
-      $('.co-express').hidden = quote; // express pay would skip the delivery quote
+      if ($('.co-express')) $('.co-express').hidden = quote; // express pay would skip the delivery quote
       $('#co-btn-label').textContent = quote ? (PREVIEW ? 'Send test quote request' : 'Request delivery quote') : (PREVIEW ? 'Place test order' : 'Pay now');
       var total = subtotal - discount + delivery;
       var rows = [['Subtotal', money(subtotal)]];
@@ -1000,8 +1031,22 @@
       return { subtotal: subtotal, discount: discount, delivery: delivery, total: total, zone: z, pickup: pickup, quote: quote };
     }
 
+    // Live site: a code the page doesn't know yet is looked up on the server (the list of codes is never sent
+    // to the browser). The server checks it again, with the first-order rule, when the order is placed.
     function applyCode() {
       var code = $('#co-code').value.trim().toUpperCase();
+      var m = $('#co-code-msg');
+      if (!PREVIEW && code && !(cfg.discounts || []).some(function (x) { return x.code === code; })) {
+        m.className = 'form-msg'; m.textContent = 'Checking…';
+        fetch('/api/discounts/check', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: code }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { if (d && d.discount) (cfg.discounts = cfg.discounts || []).push(d.discount); applyKnownCode(code); })
+          .catch(function () { m.textContent = 'We couldn\'t check that code just now. Please try again.'; m.className = 'form-msg error'; });
+        return;
+      }
+      applyKnownCode(code);
+    }
+    function applyKnownCode(code) {
       var m = $('#co-code-msg');
       m.className = 'form-msg';
       if (!code) { appliedCode = null; m.textContent = ''; totals(); return; }
@@ -1058,16 +1103,27 @@
     });
 
     // ---- Square (live site) ----
-    // Your developer sets window.MH_SQUARE = { appId, locationId, sandbox } and loads https://web.squarecdn.com/v1/square.js
-    // (https://sandbox.web.squarecdn.com/v1/square.js for testing). The card token is sent to /api/orders, and the
-    // server takes the payment with Square's Payments API after re-checking prices, delivery and codes.
+    // /api/config.js sets window.MH_SQUARE = { appId, locationId, sandbox, sdkUrl } from the server's settings, and
+    // Square's card form is loaded from sdkUrl. The card token is sent to /api/orders, and the server takes the
+    // payment with Square's Payments API after re-checking prices, delivery, codes and stock.
     // Quote requests (outside the zones) are sent without a card token and saved as 'awaiting quote'.
+    // Apple Pay and Google Pay need the shop's domain registered with Square first, so the express buttons stay
+    // hidden on the live site until that's done.
     var card = null;
-    if (!PREVIEW && window.Square && window.MH_SQUARE) {
-      try {
+    function loadSquare() {
+      if (window.Square) return Promise.resolve();
+      return new Promise(function (resolve, reject) {
+        var sc = document.createElement('script'); sc.src = window.MH_SQUARE.sdkUrl; sc.onload = resolve; sc.onerror = reject;
+        document.head.appendChild(sc);
+      });
+    }
+    if (!PREVIEW) $('.co-express').remove();
+    if (!PREVIEW && window.MH_SQUARE) {
+      $('#card-container').innerHTML = '<p class="co-help">Loading Square\'s secure card form…</p>';
+      loadSquare().then(function () {
         var payments = window.Square.payments(window.MH_SQUARE.appId, window.MH_SQUARE.locationId);
-        payments.card().then(function (c) { card = c; return c.attach('#card-container'); }).catch(function () { $('#co-pay-err').textContent = 'The card form didn\'t load. Please refresh the page.'; });
-      } catch (err) { $('#co-pay-err').textContent = 'The card form didn\'t load. Please refresh the page.'; }
+        return payments.card().then(function (c) { $('#card-container').innerHTML = ''; card = c; return c.attach('#card-container'); });
+      }).catch(function () { $('#card-container').innerHTML = ''; $('#co-pay-err').textContent = 'The card form didn\'t load. Please refresh the page.'; });
     } else if (!PREVIEW) {
       $('#card-container').innerHTML = '<p>Card payments are being set up. Please email hello@mirrorhousemelbourne.com.au to order.</p>';
     }
@@ -1147,17 +1203,22 @@
       var tokenP = t.quote ? Promise.resolve(null) : card ? card.tokenize().then(function (r) { if (r.status !== 'OK') throw new Error('Please check your card details.'); return r.token; }) : Promise.reject(new Error('Card payments aren\'t available yet.'));
       tokenP.then(function (token) {
         if (token) data.source_id = token;
-        data.idempotency_key = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
+        data.idempotency_key = rid();
+        data.session_id = VISIT.sid;
+        data.expected_total = t.total; // the server refuses the payment if its total differs from what was shown
         return fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) })
           .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); });
       }).then(function (res) {
-        if (!res.ok) throw new Error(res.d.error || 'We couldn\'t place the order.');
+        if (!res.ok) { var e = new Error(res.d.error || 'We couldn\'t place the order.'); e.field = res.d.field; throw e; }
         t.total = res.d.total_cents != null ? res.d.total_cents : t.total;
         confirmation('#' + res.d.order_id, t, data);
       }).catch(function (err) {
         submit.disabled = false;
         msg.textContent = err.message || 'We couldn\'t place the order. Please try again.';
         msg.className = 'form-msg error';
+        if (err.field === 'co-pay') $('#co-pay-err').textContent = err.message;
+        else if (err.field === 'co-code') { var cm = $('#co-code-msg'); cm.textContent = err.message; cm.className = 'form-msg error'; appliedCode = null; totals(); }
+        else if (err.field && $('#' + err.field)) { setErr(err.field, err.message); $('#' + err.field).focus(); }
       });
     });
   }
@@ -1339,8 +1400,8 @@
 
 // Admin quick-access button.
 // Only appears for you once you're signed in to the admin. Everyone else never sees it.
-// Live site: shown only to people signed in through Cloudflare Access (set up by your developer),
-// and the admin page itself is also protected by Cloudflare Access.
+// Live site: shown only in a browser that's signed in to the admin (Netlify Identity keeps the sign-in in this
+// browser). It's only a shortcut: the admin itself checks the sign-in on the server.
 // Preview: shown while you're signed in to the preview admin in this browser (30 minutes without activity signs you out).
 (function () {
   var actions = document.querySelector('.header-actions');
@@ -1376,11 +1437,7 @@
     setInterval(check, 60000);
     return;
   }
-  if (!window.fetch) return;
-  fetch('/cdn-cgi/access/get-identity', { credentials: 'same-origin' })
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (id) { if (id && id.email) show(); })
-    .catch(function () {});
+  try { if (localStorage.getItem('gotrue.user')) show(); } catch (e) { /* storage blocked */ }
 })();
 
 // Signature piece: switch the photos between the gold and black frames.

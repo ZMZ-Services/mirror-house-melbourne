@@ -1,32 +1,12 @@
 // Mirror House admin: data layer.
-// In this preview everything is kept in this browser (localStorage). On the live site your developer
-// swaps the load/save functions for calls to the Worker API (/api/admin/...) backed by the D1 database.
+// Live site: everything is kept in the store's database. The admin loads it through /api/admin/state after
+// sign-in, and save() sends what changed to /api/admin/sync (see netlify/functions).
 (function () {
   'use strict';
 
-  var KEY = 'mh-admin-v1';
   var DAY = 86400000;
 
   // ---------- helpers ----------
-  function rng(seed) { // mulberry32: same sample data every time
-    return function () {
-      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
-      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-  function pick(r, arr) { return arr[Math.floor(r() * arr.length)]; }
-  function weighted(r, items) { // [[value, weight], ...]
-    var total = items.reduce(function (s, i) { return s + i[1]; }, 0), x = r() * total;
-    for (var i = 0; i < items.length; i++) { x -= items[i][1]; if (x <= 0) return items[i][0]; }
-    return items[items.length - 1][0];
-  }
-  function poisson(r, lambda) {
-    var L = Math.exp(-lambda), k = 0, p = 1;
-    do { k++; p *= r(); } while (p > L);
-    return k - 1;
-  }
   function startOfDay(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
   function dayKey(d) { var x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); }
   function slugify(s) { return String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80); }
@@ -274,135 +254,12 @@
     address: 'Point Cook, VIC 3030', legalName: 'Mirrorhousemelbourne', abn: '50 417 829 779', hours: 'Mon–Sat, 9am–5pm', currency: 'AUD', gstIncluded: true, gstRegistered: false
   };
 
-  // ---------- sample orders (clearly flagged as sample) ----------
-  var FIRST = ['Olivia', 'Charlotte', 'Amelia', 'Isla', 'Mia', 'Ava', 'Grace', 'Chloe', 'Sophie', 'Ruby', 'Zoe', 'Emily', 'Hannah', 'Lucy', 'Ella',
-    'Jack', 'Oliver', 'Noah', 'William', 'Thomas', 'James', 'Henry', 'Leo', 'Lucas', 'Harrison', 'Priya', 'Mei', 'Sofia', 'Ahmed', 'Nikos'];
-  var LAST = ['Nguyen', 'Smith', 'Jones', 'Williams', 'Brown', 'Wilson', 'Taylor', 'Martin', 'Anderson', 'Thompson', 'White', 'Walker', 'Kelly',
-    'Papadopoulos', 'Singh', 'Chen', 'Rossi', 'Murphy', 'Ryan', 'Clarke'];
-  var PLACES = [
-    ['Point Cook', '3030', 'z1'], ['Werribee', '3030', 'z1'], ['Hoppers Crossing', '3029', 'z1'], ['Tarneit', '3029', 'z1'], ['Altona', '3018', 'z1'],
-    ['Williams Landing', '3027', 'z1'], ['Footscray', '3011', 'z2'], ['Yarraville', '3013', 'z2'], ['Williamstown', '3016', 'z2'], ['Richmond', '3121', 'z2'],
-    ['South Yarra', '3141', 'z2'], ['Brunswick', '3056', 'z2'], ['Port Melbourne', '3207', 'z2'], ['Coburg', '3058', 'z2'], ['Melbourne', '3000', 'z2'],
-    ['Essendon', '3040', 'z3'], ['Hawthorn', '3122', 'z3'], ['Camberwell', '3124', 'z3'], ['Brighton', '3186', 'z3'], ['Glen Waverley', '3150', 'z3'],
-    ['Box Hill', '3128', 'z3'], ['St Kilda', '3182', 'z3'], ['Northcote', '3070', 'z3'], ['Preston', '3072', 'z3'], ['Sunbury', '3429', 'z3']];
-  var STREETS = ['Station St', 'Main Rd', 'Park Ave', 'Church St', 'High St', 'Elm Gr', 'Bay St', 'Victoria St', 'Albert Rd', 'Wattle Way', 'Banksia Cres', 'Ocean Dr'];
-
-  function buildSampleOrders(now) {
-    var r = rng(20261105);
-    var orders = [], customers = {};
-    var today = startOfDay(now).getTime();
-    var n = 1001;
-    var weights = [['statement-curve-mirror-gold', 40], ['statement-curve-mirror-black', 34], ['ondine-wavy-wall-mirror', 16], ['grand-royale-arched-brass-floor-mirror', 10]];
-    var prices = {}; PRODUCTS.forEach(function (p) { prices[p.slug] = p; });
-    var zonePrice = { z1: 4900, z2: 7900, z3: 10900 };
-    var pool = [];
-    for (var i = 0; i < 700; i++) {
-      var f = pick(r, FIRST), l = pick(r, LAST), place = pick(r, PLACES);
-      pool.push({ id: 'c' + (i + 1), name: f + ' ' + l, email: (f + '.' + l).toLowerCase().replace(/[^a-z.]/g, '') + (i % 7 === 0 ? i : '') + '@example.com',
-        phone: '04' + String(Math.floor(r() * 1e8)).padStart(8, '0').replace(/(\d{2})(\d{3})(\d{3})/, '$1 $2 $3'),
-        address: { line1: (1 + Math.floor(r() * 180)) + ' ' + pick(r, STREETS), suburb: place[0], state: 'VIC', postcode: place[1] }, zone: place[2],
-        marketing: r() < 0.55 });
-    }
-    for (var d = 364; d >= 0; d--) {
-      var dayStart = today - d * DAY;
-      var dow = new Date(dayStart).getDay();
-      var growth = 0.35 + 1.1 * (1 - d / 364);
-      var weekend = dow === 0 || dow === 6 ? 1.35 : 1;
-      var count = poisson(r, 0.55 * growth * weekend);
-      for (var k = 0; k < count; k++) {
-        var cust = r() < 0.12 && orders.length > 10 ? customers[pick(r, Object.keys(customers))] : pool[Math.floor(r() * pool.length)];
-        customers[cust.id] = cust;
-        var hour = weighted(r, [[8, 2], [9, 3], [10, 4], [11, 4], [12, 5], [13, 5], [14, 4], [15, 4], [16, 4], [17, 4], [18, 5], [19, 7], [20, 8], [21, 7], [22, 4], [23, 2], [7, 1]]);
-        var created = dayStart + hour * 3600000 + Math.floor(r() * 3600000);
-        if (created > now.getTime()) created = now.getTime() - Math.floor(r() * 3600000);
-        var lines = [], slug = weighted(r, weights);
-        var qty = slug.indexOf('statement') === 0 && r() < 0.34 ? 2 : 1;
-        lines.push({ slug: slug, title: prices[slug].title, price: prices[slug].price, qty: qty });
-        if (r() < 0.08) { var s2 = weighted(r, weights); if (s2 !== slug) lines.push({ slug: s2, title: prices[s2].title, price: prices[s2].price, qty: 1 }); }
-        var subtotal = lines.reduce(function (s, x) { return s + x.price * x.qty; }, 0);
-        var pickup = r() < 0.17;
-        var insurance = 0;
-        var discountCode = r() < 0.24 ? 'WELCOME10' : null;
-        var discount = discountCode ? Math.round(subtotal * 0.1) : 0;
-        var delivery = pickup ? 0 : zonePrice[cust.zone];
-        var total = subtotal - discount + delivery + insurance;
-        var age = (now.getTime() - created) / DAY;
-        var fulfilment, events = [{ at: created, text: 'Order placed on the online store' }, { at: created + 60000, text: 'Payment of ' + (total / 100).toFixed(2) + ' AUD captured by Square' }];
-        if (age > 6) {
-          fulfilment = pickup ? 'picked_up' : 'delivered';
-          events.push({ at: created + 1.5 * DAY, text: pickup ? 'Marked ready for pick-up' : 'Marked out for delivery' });
-          events.push({ at: created + 3 * DAY, text: pickup ? 'Picked up by customer' : 'Delivered and checked with customer' });
-        } else if (age > 2.5) {
-          fulfilment = pickup ? 'ready' : 'out_for_delivery';
-          events.push({ at: created + 1.5 * DAY, text: pickup ? 'Marked ready for pick-up' : 'Marked out for delivery' });
-        } else fulfilment = 'unfulfilled';
-        var refunded = age > 10 && r() < 0.02;
-        if (refunded) events.push({ at: created + 4 * DAY, text: 'Refund issued (damaged on arrival, replacement declined)' });
-        orders.push({
-          id: n, number: '#' + n, sample: true, createdAt: created, customerId: cust.id,
-          customer: { name: cust.name, email: cust.email, phone: cust.phone }, address: pickup ? null : cust.address,
-          method: pickup ? 'pickup' : 'delivery', zone: pickup ? null : cust.zone, deliveryDay: pickup ? null : dayKey(created + (2 + Math.floor(r() * 3)) * DAY),
-          lines: lines, subtotal: subtotal, discountCode: discountCode, discount: discount, delivery: delivery, insurance: insurance, total: total,
-          payment: refunded ? 'refunded' : 'paid', card: pick(r, ['Visa', 'Mastercard', 'Amex', 'Apple Pay', 'Google Pay']) + ' via Square',
-          fulfilment: fulfilment, tracking: '', note: r() < 0.12 ? pick(r, ['Please call 30 min before arriving.', 'Two flights of stairs, no lift.', 'Gate code 2468.', 'Leave with building manager is NOT ok, please arrange time.']) : '',
-          events: events, marketing: cust.marketing
-        });
-        n++;
-      }
-    }
-    addSampleQuotes(orders, customers, prices, now);
-    return orders;
-  }
-
-  // Two sample quote requests from outside the delivery zones, so the quote flow can be tried.
-  function addSampleQuotes(orders, _c, prices, now) {
-    var t = now.getTime(), next = orders.reduce(function (m, o) { return Math.max(m, o.id); }, 1000) + 1;
-    [[ 'Megan Walsh', 'megan.walsh@example.com', '0423 118 904', '8 Lydiard St', 'Ballarat', '3350', 'statement-curve-mirror-black', 2, 'awaiting_quote', 0.4 ],
-     [ 'Tom Fraser', 'tom.fraser@example.com', '0438 772 015', '41 Pall Mall', 'Bendigo', '3550', 'grand-royale-arched-brass-floor-mirror', 1, 'quote_sent', 1.6 ]].forEach(function (q, i) {
-      var p = prices[q[6]], created = t - q[9] * DAY, subtotal = p.price * q[7];
-      var events = [{ at: created, text: 'Delivery quote requested from the online store (address outside your zones). Nothing charged.' }];
-      if (q[8] === 'quote_sent') events.push({ at: created + 0.3 * DAY, text: 'Delivery quote of $189.00 sent to ' + q[1] + ' with a Square payment link' });
-      orders.push({ id: next + i, number: '#' + (next + i), sample: true, createdAt: created, customerId: 'q' + i,
-        customer: { name: q[0], email: q[1], phone: q[2] }, address: { line1: q[3], suburb: q[4], state: 'VIC', postcode: q[5] },
-        method: 'delivery', zone: 'quote', deliveryDay: null, lines: [{ slug: q[6], title: p.title, price: p.price, qty: q[7] }],
-        subtotal: subtotal, discountCode: null, discount: 0, delivery: q[8] === 'quote_sent' ? 18900 : 0, insurance: 0, total: subtotal + (q[8] === 'quote_sent' ? 18900 : 0),
-        payment: q[8], card: q[8] === 'quote_sent' ? 'Square payment link sent' : 'No payment yet', fulfilment: 'on_hold', tracking: '', note: '', events: events, marketing: false });
-    });
-  }
-
-  // ---------- visitor analytics (sample) ----------
-  // Built from the same seed as the orders so numbers agree: orders ≈ sessions × conversion.
-  function buildSampleTraffic(orders, now) {
-    var r = rng(77123);
-    var today = startOfDay(now).getTime();
-    var byDay = {};
-    orders.forEach(function (o) { var k = dayKey(o.createdAt); byDay[k] = (byDay[k] || 0) + 1; });
-    var days = [];
-    for (var d = 364; d >= 0; d--) {
-      var t = today - d * DAY, k = dayKey(t), dow = new Date(t).getDay();
-      var growth = 0.35 + 1.1 * (1 - d / 364), weekend = dow === 0 || dow === 6 ? 1.3 : 1;
-      var sessions = Math.max((byDay[k] || 0) * 40, Math.round((38 + r() * 26) * growth * weekend));
-      if (d === 0) sessions = Math.round(sessions * Math.min(1, (now.getHours() + now.getMinutes() / 60) / 24 + 0.05));
-      var visitors = Math.round(sessions * (0.78 + r() * 0.08));
-      var productViews = Math.round(sessions * (0.5 + r() * 0.12));
-      var visualiser = Math.round(sessions * (0.09 + r() * 0.05));
-      var addToBag = Math.max(byDay[k] || 0, Math.round(sessions * (0.045 + r() * 0.025)));
-      var checkout = Math.max(byDay[k] || 0, Math.round(addToBag * (0.48 + r() * 0.15)));
-      days.push({ date: k, t: t, sessions: sessions, visitors: visitors, productViews: productViews, visualiser: visualiser, addToBag: addToBag, checkout: checkout, orders: byDay[k] || 0,
-        bounce: 0.38 + r() * 0.12, duration: 95 + r() * 80, pagesPer: 2.4 + r() * 1.3, returning: 0.18 + r() * 0.1 });
-    }
-    return days;
-  }
-  var SOURCES = [['Direct', 31], ['Google search', 27], ['Instagram', 18], ['Facebook', 10], ['Pinterest', 6], ['Referral sites', 5], ['Email', 3]];
-  var DEVICES = [['Mobile', 67], ['Desktop', 28], ['Tablet', 5]];
-  var PAGES = [['Home', 'index.html', 100], ['Try It in Your Room', 'visualiser.html', 31], ['Haven Soft Arch', 'product.html?slug=haven-soft-arch-mirror-natural', 22],
-    ['Versailles Ornate', 'product.html?slug=versailles-ornate-mirror-gold', 20], ['Statement Curve – Gold', 'product.html?slug=statement-curve-mirror-gold', 18],
-    ['Checkout', 'checkout.html', 9], ['Delivery, Returns & Care', 'policies.html', 7]];
-  var HOURS = [1, 0.6, 0.4, 0.3, 0.3, 0.5, 1.2, 2.2, 3.2, 3.8, 4.1, 4.4, 5, 4.7, 4.3, 4.2, 4.5, 5.2, 6.4, 7.8, 8.6, 7.7, 5.4, 2.6];
-  var LOCATIONS = [['Wyndham (Point Cook, Werribee, Tarneit)', 29], ['Inner west', 17], ['Inner Melbourne', 15], ['Eastern suburbs', 13], ['Northern suburbs', 11], ['Bayside', 8], ['Regional Victoria', 4], ['Interstate', 3]];
-
-  // ---------- store ----------
-  var state = null;
+  // ---------- store (live: the database, through /api/admin) ----------
+  // After sign-in the admin loads everything once (init) and keeps it in memory, so every page stays quick.
+  // save() works out what changed since the last load and sends only that to /api/admin/sync. The server checks
+  // and saves it, records it in the activity log, and sends back the fresh state.
+  var state = null, synced = null, getToken = null, queue = Promise.resolve(), pending = 0;
+  // Debbie's starting set-up. The live database was seeded from this (scripts/gen-seed.mjs).
   function defaults() {
     var now = new Date();
     return {
@@ -416,275 +273,137 @@
       subscribers: []
     };
   }
-  function load() {
-    if (state) return state;
-    try { state = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { state = null; }
-    if (state && state.version === 1) migrate1to2(state);
-    if (state && !state.sizeWording) { // tidy size wording in products saved before the change
-      var fix = function (t) { return String(t).replace(/200cm high × 100cm wide/g, '200 cm high × 100 cm wide').replace(/200cm wide × 200cm high/g, '200 cm × 200 cm').replace(/200cm × 200cm/g, '200 cm × 200 cm')
-        .replace(/^A bold (gold|black) metal frame with elegant curved detailing/, 'A 2-metre statement mirror with a bold $1 metal frame and elegant curved detailing').replace(/^A generous full-length mirror/, 'A generous 2-metre, full-length mirror'); };
-      (state.products || []).forEach(function (p) { p.desc = fix(p.desc || ''); p.specs = (p.specs || []).map(fix); });
-      state.sizeWording = true; save();
-    }
-    if (state && !state.studioLandscape) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('studio-box-mirror-') === 0) p.images = (p.images || []).map(function (i) { return i.replace('-horizontal.jpg', '-landscape.jpg'); }); }); state.studioLandscape = true; save(); }
-    if (state && !state.studioHorizontal) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('studio-box-mirror-') === 0) { var d = PRODUCTS.filter(function (x) { return x.slug === p.slug; })[0]; if (d) { p.images = d.images.slice(); p.desc = d.desc; p.specs = d.specs.slice(); p.bothWays = true; } } }); state.studioHorizontal = true; save(); }
-    if (state && !state.studioNoTrio) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('studio-box-mirror-') === 0) p.images = (p.images || []).filter(function (i) { return i.indexOf('trio') < 0; }); }); state.studioNoTrio = true; save(); }
-    if (state && !state.gatsbyPhoto2) { (state.products || []).forEach(function (p) { if (p.slug === 'gatsby-arch-mirror-black') p.images = ['images/products/gatsby-arch-mirror-black-2.jpg']; }); state.gatsbyPhoto2 = true; save(); }
-    if (state && !state.versaillesChampPhoto) { (state.products || []).forEach(function (p) { if (p.slug === 'versailles-ornate-mirror-champagne') p.images = (p.images || []).map(function (i) { return i.replace('versailles-ornate-mirror-champagne.jpg', 'versailles-ornate-mirror-champagne-2.jpg'); }); }); state.versaillesChampPhoto = true; save(); }
-    if (state && !state.versaillesBlackPhoto) { (state.products || []).forEach(function (p) { if (p.slug === 'versailles-ornate-mirror-black') { p.images = (p.images || []).map(function (i) { return i.replace('versailles-ornate-mirror-black.jpg', 'versailles-ornate-mirror-black-2.jpg'); }); var d = PRODUCTS.filter(function (x) { return x.slug === p.slug; })[0]; if (d) { p.desc = d.desc; p.specs = d.specs.slice(); } } }); state.versaillesBlackPhoto = true; save(); }
-    if (state && state.settings && state.settings.gstRegistered === undefined) { state.settings.gstRegistered = false; save(); }
-    if (state && !Array.isArray(state.subscribers)) { state.subscribers = []; save(); }
-    if (state && !state.launchClean) { // ready for launch: remove sample and test orders/visitors and products that aren't Mirror House's; keep every mirror
-      var notOurs = ['grand-royale-arched-brass-floor-mirror', 'ondine-wavy-wall-mirror', 'travertine-mushroom-table-lamp', 'hand-thrown-ceramic-vase', 'ribbed-amber-glassware-set', 'travertine-catch-all-tray'];
-      state.orders = (state.orders || []).filter(function (o) { return !o.sample && !o.test; });
-      state.products = (state.products || []).filter(function (p) { return notOurs.indexOf(p.slug) < 0; });
-      state.customerNotes = {};
-      state.sampleData = false;
-      state.launchClean = true; save();
-    }
-    if (state && !state.versaillesSizes) { // Versailles now in two sizes; 190 × 90 cm Gold sold out
-      var vD = PRODUCTS.filter(function (p) { return p.slug.indexOf('versailles-ornate-mirror-') === 0; });
-      (state.products || []).forEach(function (p) { var d = vD.filter(function (x) { return x.slug === p.slug; })[0]; if (d) { p.title = d.title; p.specs = d.specs.slice(); } });
-      vD.filter(function (p) { return p.slug.indexOf('-190-') > 0; }).reverse().forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
+  function clone(x) { return JSON.parse(JSON.stringify(x)); }
+  function api(path, opts) {
+    opts = opts || {};
+    return getToken().then(function (token) {
+      var headers = Object.assign({ authorization: 'Bearer ' + token }, opts.headers || {});
+      return fetch(path, Object.assign({}, opts, { headers: headers, cache: 'no-store' }));
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) { var e = new Error(d.error || 'The server couldn\'t save that (error ' + r.status + ').'); e.status = r.status; throw e; }
+        return d;
       });
-      state.versaillesSizes = true; save();
-    }
-    if (state && !state.halo220) { // large Halo is 220 × 120 cm (was listed as 210)
-      var h2 = PRODUCTS.filter(function (p) { return p.slug.indexOf('halo-arch-floor-mirror-') === 0; });
-      (state.products || []).forEach(function (p) { var d = h2.filter(function (x) { return x.slug === p.slug; })[0]; if (d) { p.title = d.title; p.desc = d.desc; p.specs = d.specs.slice(); p.size = d.size; } });
-      state.halo220 = true; save();
-    }
-    if (state && !state.halo220Stock) { var hq = { white: 6, gold: 3, black: 2 }; (state.products || []).forEach(function (p) { var m = p.slug.match(/^halo-arch-floor-mirror-(white|gold|black)$/); if (m) { p.price = 42000; p.stock = hq[m[1]]; p.lowAt = 2; p.supplierCode = 'Q4011'; } }); state.halo220Stock = true; save(); }
-    if (state && !state.addedParis) {
-      PRODUCTS.filter(function (p) { return p.slug.indexOf('paris-window-pane-mirror-') === 0; }).reverse().forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedParis = true; save();
-    }
-    if (state && !state.addedKnife) {
-      PRODUCTS.filter(function (p) { return p.slug === 'cut-above-knife-mirror-black'; }).forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedKnife = true; save();
-    }
-    if (state && !state.knifeStock) { (state.products || []).forEach(function (p) { if (p.slug === 'cut-above-knife-mirror-black') { p.stock = 4; p.lowAt = 1; p.supplierCode = '24LD062402'; } }); state.knifeStock = true; save(); }
-    if (state && !state.statementStock) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('statement-curve-mirror-') === 0) { p.stock = 5; p.lowAt = 1; p.supplierCode = '22Ld091609'; } }); state.statementStock = true; save(); }
-    if (state && !state.studioStock) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('studio-box-mirror-') === 0) { p.stock = 3; p.lowAt = 1; p.supplierCode = 'D3155'; } }); state.studioStock = true; save(); }
-    if (state && !state.gatsbyStock) { (state.products || []).forEach(function (p) { if (p.slug === 'gatsby-arch-mirror-black') { p.stock = 7; p.lowAt = 1; p.supplierCode = 'HS302010B-BRAD'; } }); state.gatsbyStock = true; save(); }
-    if (state && !state.monoBlkStock) { (state.products || []).forEach(function (p) { if (p.slug === 'monolith-arch-mirror-black') { p.stock = 3; p.lowAt = 2; p.supplierCode = 'HS45131-Brad'; } }); state.monoBlkStock = true; save(); }
-    if (state && !state.monoConStock) { (state.products || []).forEach(function (p) { if (p.slug === 'monolith-arch-mirror-concrete') { p.stock = 3; p.lowAt = 2; p.supplierCode = 'HS45131-Brad'; } }); state.monoConStock = true; save(); }
-    if (state && !state.vers220Stock) { (state.products || []).forEach(function (p) { if (/^versailles-ornate-mirror-(gold|black|champagne)$/.test(p.slug)) { p.stock = 3; p.lowAt = 2; p.supplierCode = 'RF 11002-F'; } }); state.vers220Stock = true; save(); }
-    if (state && !state.vers190Stock) { var vq = { gold: 0, black: 1, champagne: 1 }; (state.products || []).forEach(function (p) { var m = p.slug.match(/^versailles-ornate-mirror-190-(gold|black|champagne)$/); if (m) { p.stock = vq[m[1]]; p.lowAt = 2; p.supplierCode = 'RF 11002'; } }); state.vers190Stock = true; save(); }
-    if (state && !state.halo200Price) { (state.products || []).forEach(function (p) { if (/^halo-arch-floor-mirror-200-/.test(p.slug)) p.price = 33000; }); state.halo200Price = true; save(); }
-    if (state && !state.florenceStock) { (state.products || []).forEach(function (p) { if (p.slug === 'florence-window-arch-mirror-black') { p.stock = 1; p.lowAt = 2; p.supplierCode = '25Ld061804'; } }); state.florenceStock = true; save(); }
-    if (state && !state.halo200Stock) { (state.products || []).forEach(function (p) { if (/^halo-arch-floor-mirror-200-/.test(p.slug)) { p.stock = 2; p.lowAt = 2; p.supplierCode = 'Q4011'; } }); state.halo200Stock = true; save(); }
-    if (state && !state.halo210Added) { // middle Halo size 210 × 120 cm
-      var hm = PRODUCTS.filter(function (p) { return p.slug.indexOf('halo-arch-floor-mirror-') === 0; });
-      (state.products || []).forEach(function (p) { var d = hm.filter(function (x) { return x.slug === p.slug; })[0]; if (d) p.specs = d.specs.slice(); });
-      hm.filter(function (p) { return p.slug.indexOf('-210-') > 0; }).reverse().forEach(function (p) { if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p)))); });
-      state.halo210Added = true; save();
-    }
-    if (state && !state.luxeStock) { (state.products || []).forEach(function (p) { if (p.slug === 'luxe-ornate-arch-mirror-gold') { p.stock = 4; p.lowAt = 2; p.supplierCode = '21lm2151-F'; } }); state.luxeStock = true; save(); }
-    if (state && !state.belgraviaStock) { var bq = { gold: 2, champagne: 4, black: 4 }; (state.products || []).forEach(function (p) { var m = p.slug.match(/^belgravia-crest-mirror-(gold|champagne|black)$/); if (m) { p.stock = bq[m[1]]; p.lowAt = 2; p.supplierCode = 'LPU12302'; } }); state.belgraviaStock = true; save(); }
-    if (state && !state.belgraviaGoldAt1) { (state.products || []).forEach(function (p) { if (p.slug === 'belgravia-crest-mirror-gold') p.lowAt = 1; }); state.belgraviaGoldAt1 = true; save(); }
-    if (state && !state.belgraviaGoldBack2) { (state.products || []).forEach(function (p) { if (p.slug === 'belgravia-crest-mirror-gold') p.lowAt = 2; }); state.belgraviaGoldBack2 = true; save(); }
-    if (state && !state.belleStock4) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('belle-beaded-mirror-') === 0) { p.stock = 4; p.lowAt = 2; } }); state.belleStock4 = true; save(); }
-    if (state && !state.havenStock4) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('haven-soft-arch-mirror-') === 0) { p.stock = 4; p.lowAt = 2; } }); state.havenStock4 = true; save(); }
-    if (state && !state.sohoStock8) { (state.products || []).forEach(function (p) { if (p.slug === 'soho-slim-frame-mirror-black') { p.stock = 8; p.lowAt = 2; p.supplierCode = 'Q1085'; } }); state.sohoStock8 = true; save(); }
-    if (state && !state.havenSupplier) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('haven-soft-arch-mirror-') === 0) p.supplierCode = '25LD091004'; }); state.havenSupplier = true; save(); }
-    if (state && !state.belleSupplier) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('belle-beaded-mirror-') === 0) p.supplierCode = '123D302-BIG'; }); state.belleSupplier = true; save(); }
-    if (state && !state.belgraviaSupplier) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('belgravia-crest-mirror-') === 0 && !p.supplierCode) p.supplierCode = 'LPU12302'; }); state.belgraviaSupplier = true; save(); }
-    if (state && !state.cathedralQty2) { (state.products || []).forEach(function (p) { if (p.slug === 'cathedral-arch-window-mirror-black') p.stock = 2; }); state.cathedralQty2 = true; save(); }
-    if (state && !state.rivieraSoldOut) { (state.products || []).forEach(function (p) { if (p.slug === 'riviera-rounded-floor-mirror-gold') { p.stock = 0; p.badge = ''; } }); state.rivieraSoldOut = true; save(); }
-    if (state && !state.havenFiveColours) { // Haven: Warm Wood added, Walnut renamed Dark Brown
-      var hD = PRODUCTS.filter(function (p) { return p.slug.indexOf('haven-soft-arch-mirror-') === 0; });
-      (state.products || []).forEach(function (p) { var d = hD.filter(function (x) { return x.slug === p.slug; })[0]; if (d) { p.title = d.title; p.desc = d.desc; p.specs = d.specs.slice(); p.sku = d.sku; } });
-      hD.slice().reverse().forEach(function (p) { if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p)))); });
-      state.havenFiveColours = true; save();
-    }
-    if (state && !state.belleHang) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('belle-beaded-mirror-') === 0) { var d = PRODUCTS.filter(function (x) { return x.slug === p.slug; })[0]; if (d) { p.desc = d.desc; p.specs = d.specs.slice(); } } }); state.belleHang = true; save(); }
-    if (state && !state.addedBelle) {
-      PRODUCTS.filter(function (p) { return p.slug.indexOf('belle-beaded-mirror-') === 0; }).reverse().forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedBelle = true; save();
-    }
-    if (state && !state.addedHaven) {
-      PRODUCTS.filter(function (p) { return p.slug.indexOf('haven-soft-arch-mirror-') === 0; }).reverse().forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedHaven = true; save();
-    }
-    if (state && !state.duchessSoldOut) { (state.products || []).forEach(function (p) { if (p.slug === 'duchess-arch-mirror-black') { p.stock = 0; p.badge = ''; } }); state.duchessSoldOut = true; save(); }
-    if (state && !state.addedRiviera) {
-      PRODUCTS.filter(function (p) { return p.slug === 'riviera-rounded-floor-mirror-gold'; }).forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedRiviera = true; save();
-    }
-    if (state && !state.addedSoho) {
-      PRODUCTS.filter(function (p) { return p.slug === 'soho-slim-frame-mirror-black'; }).forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedSoho = true; save();
-    }
-    if (state && !state.zone3Trim50) { ((state.shipping || {}).zones || []).forEach(function (z) { if (z.id === 'z3') z.postcodes = String(z.postcodes || '').replace('3000-3138', '3000-3115, 3117-3136'); }); state.zone3Trim50 = true; save(); }
-    if (state && !state.zone3List) { // Zone 3 = about 31-50 km; Richmond 3121 and South Melbourne 3205 move to Zone 3; Keilor North, Keilor Park, Middle Park by suburb
-      ((state.shipping || {}).zones || []).forEach(function (z) {
-        if (z.id === 'z2') { z.postcodes = String(z.postcodes || '').split(/\s*,\s*/).filter(function (x) { return x && x !== '3121' && x !== '3205'; }).join(', '); z.areas = String(z.areas || '').replace(', South Melbourne', '').replace(', Richmond', ''); }
-        if (z.id === 'z3') { ['Keilor North 3036', 'Keilor Park 3042', 'Middle Park 3206'].forEach(function (e) { if (String(z.postcodes || '').indexOf(e) < 0) z.postcodes = (z.postcodes ? z.postcodes + ', ' : '') + e; }); z.areas = 'About 31–50 km from Point Cook: Melton, Melton South, Melton West, Kurunjang, Brookfield, Cobblebank, Weir Views, Strathtulloh, Aintree, Fraser Rise, Rockbank, Thornhill Park, St Albans, Keilor North, Keilor Park, Glenroy, Pascoe Vale, Oak Park, Broadmeadows, Meadow Heights, Greenvale, Roxburgh Park, Craigieburn, Somerton, Campbellfield, Fawkner, Thomastown, Lalor, Epping, Reservoir, Preston, Thornbury, Bundoora, Mill Park, South Morang, Doreen, Greensborough, Montmorency, Diamond Creek, Carlton, Carlton North, Parkville, Richmond, Kew, Hawthorn, Camberwell, Burwood, Box Hill, Ringwood, South Melbourne, Middle Park, St Kilda, Elwood, Prahran, Windsor, Brighton, Bentleigh, Moorabbin, Cheltenham, Mentone, Geelong and surrounds'; }
-      });
-      state.zone3List = true; save();
-    }
-    if (state && !state.eastMelbZ2) { ((state.shipping || {}).zones || []).forEach(function (z) { if (z.id === 'z2' && !/(^|[,\s])3002($|[,\s])/.test(z.postcodes || '')) z.postcodes = '3002, ' + (z.postcodes || ''); }); state.eastMelbZ2 = true; save(); }
-    if (state && !state.zones15and30) { // Zone 1 = within ~15 km, Zone 2 = ~15-30 km (Debbie's list); Tarneit and Derrimut by suburb
-      ((state.shipping || {}).zones || []).forEach(function (z) {
-        if (z.id === 'z1') { z.postcodes = '3030, 3029, 3028, 3027, 3026, 3018'; z.areas = 'Within about 15 km of Point Cook: Point Cook, Werribee, Werribee South, Hoppers Crossing, Truganina, Williams Landing, Laverton, Laverton North, Seabrook, Altona Meadows, Altona and Seaholm'; }
-        if (z.id === 'z2') { z.postcodes = '3000, 3002, 3003, 3004, 3006, 3008, 3011, 3012, 3013, 3015, 3016, 3019, 3020, 3022, 3023, 3024, 3025, 3031, 3032, 3033, 3034, 3036, 3037, 3038, 3039, 3040, 3042, 3043, 3051, 3055, 3056, 3057, 3058, 3141, 3206, 3207, 3211, Tarneit 3029, Derrimut 3026'; z.areas = 'About 15–30 km from Point Cook: Tarneit, Wyndham Vale, Manor Lakes, Derrimut, Little River, Altona North, Brooklyn, Newport, Williamstown, Spotswood, Yarraville, Footscray, Seddon, Sunshine, Braybrook, Ardeer, Deer Park, Caroline Springs, Taylors Hill, Taylors Lakes, Keilor, Avondale Heights, Maribyrnong, Essendon, Moonee Ponds, Airport West, Niddrie, Tullamarine, Flemington, Kensington, North Melbourne, Melbourne CBD, Docklands, Southbank, Port Melbourne, Albert Park, South Yarra, Brunswick, Coburg and surrounds'; }
-      });
-      state.zones15and30 = true; save();
-    }
-    if (state && !state.zone1Within15) { // Zone 1 = suburbs within about 15 km of Point Cook; Williamstown 3016 moves to Zone 1
-      ((state.shipping || {}).zones || []).forEach(function (z) {
-        var list = String(z.postcodes || '').split(/[,\s]+/).filter(Boolean);
-        if (z.id === 'z1') { ['3012', '3015', '3016'].forEach(function (pc) { if (list.indexOf(pc) < 0) list.push(pc); }); z.areas = 'Within about 15 km of Point Cook: Point Cook, Werribee, Werribee South, Hoppers Crossing, Truganina, Williams Landing, Laverton, Laverton North, Seabrook, Altona Meadows, Altona and Seaholm'; }
-        if (z.id === 'z2') list = list.filter(function (pc) { return ['3012', '3015', '3016'].indexOf(pc) < 0; });
-        z.postcodes = list.join(', ');
-      });
-      state.zone1Within15 = true; save();
-    }
-    if (state && !state.zone1Suburbs) { // Brooklyn 3012 and Newport 3015 move to Zone 1; Zone 1 suburb list updated
-      ((state.shipping || {}).zones || []).forEach(function (z) {
-        var list = String(z.postcodes || '').split(/[,\s]+/).filter(Boolean);
-        if (z.id === 'z1') { ['3012', '3015'].forEach(function (pc) { if (list.indexOf(pc) < 0) list.push(pc); }); z.areas = 'Within about 15 km of Point Cook: Point Cook, Werribee, Werribee South, Hoppers Crossing, Truganina, Williams Landing, Laverton, Laverton North, Seabrook, Altona Meadows, Altona and Seaholm'; }
-        if (z.id === 'z2') list = list.filter(function (pc) { return pc !== '3012' && pc !== '3015'; });
-        z.postcodes = list.join(', ');
-      });
-      state.zone1Suburbs = true; save();
-    }
-    if (state && !state.geelongZone3) { ((state.shipping || {}).zones || []).forEach(function (z) { if (z.id === 'z3' && !/(^|[,\s])3220($|[,\s])/.test(z.postcodes || '')) z.postcodes = (z.postcodes ? z.postcodes + ', ' : '') + '3220'; }); state.geelongZone3 = true; save(); }
-    if (state && !state.studioPhotosFix) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('studio-box-mirror-') === 0) { var d = PRODUCTS.filter(function (x) { return x.slug === p.slug; })[0]; if (d) p.images = d.images.slice(); } }); state.studioPhotosFix = true; save(); }
-    if (state && !state.cathedralStyled) { (state.products || []).forEach(function (p) { if (p.slug === 'cathedral-arch-window-mirror-black') { var d = PRODUCTS.filter(function (x) { return x.slug === p.slug; })[0]; if (d) p.images = d.images.slice(); } }); state.cathedralStyled = true; save(); }
-    if (state && !state.cathedralPhoto2) { (state.products || []).forEach(function (p) { if (p.slug === 'cathedral-arch-window-mirror-black') p.images = (p.images || []).map(function (i) { return i.replace('cathedral-arch-window-mirror-black.jpg', 'cathedral-arch-window-mirror-black-2.jpg'); }); }); state.cathedralPhoto2 = true; save(); }
-    if (state && !state.addedCathedral) {
-      PRODUCTS.filter(function (p) { return p.slug === 'cathedral-arch-window-mirror-black'; }).forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedCathedral = true; save();
-    }
-    if (state && !state.belgraviaPhotos) { (state.products || []).forEach(function (p) { if (p.slug.indexOf('belgravia-crest-mirror-') === 0) { var d = PRODUCTS.filter(function (x) { return x.slug === p.slug; })[0]; if (d) { p.images = d.images.slice(); p.price = d.price; } } }); state.belgraviaPhotos = true; save(); }
-    if (state && !state.addedBelgravia) {
-      PRODUCTS.filter(function (p) { return p.slug.indexOf('belgravia-crest-mirror-') === 0; }).reverse().forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedBelgravia = true; save();
-    }
-    if (state && !state.haloVariants) { // Halo now comes in White, Gold and Black, in 210 × 120 cm and 200 × 100 cm
-      var haloD = PRODUCTS.filter(function (p) { return p.slug.indexOf('halo-arch-floor-mirror-') === 0; });
-      (state.products || []).forEach(function (p) { var d = haloD.filter(function (x) { return x.slug === p.slug; })[0]; if (d) { p.title = d.title; p.desc = d.desc; p.specs = d.specs.slice(); p.images = d.images.slice(); p.size = d.size; p.sku = d.sku; } });
-      haloD.slice().reverse().forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.haloVariants = true; save();
-    }
-    if (state && !state.addedLuxe) {
-      PRODUCTS.filter(function (p) { return p.slug === 'luxe-ornate-arch-mirror-gold'; }).forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedLuxe = true; save();
-    }
-    if (state && !state.haloHang) { (state.products || []).forEach(function (p) { if (p.slug === 'halo-arch-floor-mirror-white') { var d = PRODUCTS.filter(function (x) { return x.slug === p.slug; })[0]; if (d) { p.desc = d.desc; p.specs = d.specs.slice(); } } }); state.haloHang = true; save(); }
-    if (state && !state.addedHalo) {
-      PRODUCTS.filter(function (p) { return p.slug === 'halo-arch-floor-mirror-white'; }).forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedHalo = true; save();
-    }
-    if (state && !state.addedFlorence) {
-      PRODUCTS.filter(function (p) { return p.slug === 'florence-window-arch-mirror-black'; }).forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedFlorence = true; save();
-    }
-    if (state && !state.addedVersailles) {
-      PRODUCTS.filter(function (p) { return p.slug.indexOf('versailles-ornate-mirror-') === 0; }).reverse().forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedVersailles = true; save();
-    }
-    if (state && !state.addedMonolith) {
-      PRODUCTS.filter(function (p) { return p.slug.indexOf('monolith-arch-mirror-') === 0; }).reverse().forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedMonolith = true; save();
-    }
-    if (state && !state.gatsbyMetal) { (state.products || []).forEach(function (p) { if (p.slug === 'gatsby-arch-mirror-black') { var d = PRODUCTS.filter(function (x) { return x.slug === p.slug; })[0]; p.desc = d.desc; p.specs = d.specs.slice(); } }); state.gatsbyMetal = true; save(); }
-    if (state && !state.addedGatsby) {
-      PRODUCTS.filter(function (p) { return p.slug === 'gatsby-arch-mirror-black'; }).forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedGatsby = true; save();
-    }
-    if (state && !state.renamedDuchess) { // Crown Arch renamed to Duchess Arch, metal frame, hangs or leans
-      (state.products || []).forEach(function (p) {
-        if (p.slug === 'crown-arch-mirror-black') {
-          var d = PRODUCTS.filter(function (x) { return x.slug === 'duchess-arch-mirror-black'; })[0];
-          Object.assign(p, { slug: d.slug, id: d.slug, title: d.title, sku: d.sku, desc: d.desc, specs: d.specs.slice(), images: d.images.slice() });
-        }
-      });
-      state.renamedDuchess = true; save();
-    }
-    if (state && !state.addedCrownArch) {
-      PRODUCTS.filter(function (p) { return p.slug === 'duchess-arch-mirror-black'; }).forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedCrownArch = true; save();
-    }
-    if (state && !state.addedWavyEdge) {
-      PRODUCTS.filter(function (p) { return p.slug === 'wavy-edge-wall-mirror'; }).forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedWavyEdge = true; save();
-    }
-    if (state && !state.addedStudioBox) { // add the Studio Box mirrors to an existing admin
-      PRODUCTS.filter(function (p) { return p.slug.indexOf('studio-box-mirror-') === 0; }).reverse().forEach(function (p) {
-        if (!state.products.some(function (x) { return x.slug === p.slug; })) state.products.unshift(Object.assign({ id: p.slug, tags: '', seoTitle: '', seoDesc: '' }, JSON.parse(JSON.stringify(p))));
-      });
-      state.addedStudioBox = true; save();
-    }
-    if (state && !state.removedGrandOndine) { (state.products || []).forEach(function (p) { if (p.slug === 'grand-royale-arched-brass-floor-mirror' || p.slug === 'ondine-wavy-wall-mirror') p.status = 'archived'; }); state.removedGrandOndine = true; save(); }
-    if (state && state.settings && (!state.settings.abn || !state.settings.legalName)) { state.settings.abn = state.settings.abn || '50 417 829 779'; state.settings.legalName = state.settings.legalName || 'Mirrorhousemelbourne'; save(); }
-    if (state && !state.lowAtOne) { (state.products || []).forEach(function (p) { p.lowAt = 1; }); state.lowAtOne = true; save(); }
-    if (!state || state.version !== 2) { state = defaults(); save(); }
-    if (state) { try { var pend = JSON.parse(localStorage.getItem('mh-preview-subs') || '[]'); if (pend.length) { pend.forEach(function (x) { if (!state.subscribers.some(function (y) { return String(y.email).toLowerCase() === String(x.email).toLowerCase(); })) state.subscribers.push(x); }); localStorage.removeItem('mh-preview-subs'); save(); } } catch (e) { /* ignore */ } }
-    return state;
+    });
   }
-  // Version 2: delivery insurance removed; quote requests added. Keeps everything you've changed.
-  function migrate1to2(s) {
-    if (s.shipping) delete s.shipping.insurance;
-    (s.orders || []).forEach(function (o) { if (o.sample && o.insurance) { o.total -= o.insurance; o.insurance = 0; } });
-    if (s.sampleData && !(s.orders || []).some(function (o) { return o.zone === 'quote'; })) {
-      var prices = {}; (s.products || []).forEach(function (p) { prices[p.slug] = p; });
-      if (prices['statement-curve-mirror-black'] && prices['grand-royale-arched-brass-floor-mirror']) addSampleQuotes(s.orders, null, prices, new Date());
-    }
-    s.version = 2;
-    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* keep in memory */ }
+  function setState(s) {
+    ((s.traffic && s.traffic.days) || []).forEach(function (d) { var p = d.date.split('-'); d.t = new Date(+p[0], +p[1] - 1, +p[2]).getTime(); });
+    state = s; synced = clone(s); trafficCache = null;
   }
+  // tokenFn returns a promise of the signed-in user's access token (Netlify Identity).
+  function init(tokenFn) {
+    getToken = tokenFn;
+    return api('/api/admin/state').then(function (s) { setState(s); return s; });
+  }
+  function refresh() { return api('/api/admin/state').then(function (s) { setState(s); notify(); return s; }); }
+  function load() { return state; }
+
+  // ---- working out what changed ----
+  var PRODUCT_KEYS = ['title', 'category', 'price', 'compareAt', 'cost', 'status', 'stock', 'lowAt', 'supplierCode', 'sku', 'weight', 'size', 'badge', 'bothWays', 'images', 'desc', 'specs', 'tags', 'seoTitle', 'seoDesc'];
+  var ORDER_KEYS = ['payment', 'fulfilment', 'tracking', 'note', 'delivery', 'refunded', 'card', 'deliveryDay'];
+  function same(a, b) { return JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b); }
+  function byKey(list, k) { var m = {}; (list || []).forEach(function (x) { m[x[k]] = x; }); return m; }
+  function changes(cur, old) {
+    var out = {}, any = false;
+    var oldP = byKey(old.products, 'slug'), curP = byKey(cur.products, 'slug'), ups = [], dels = [];
+    cur.products.forEach(function (p) {
+      var o = oldP[p.slug], f = {};
+      PRODUCT_KEYS.forEach(function (k) { if (!o || !same(p[k], o[k])) f[k] = p[k] === undefined ? null : p[k]; });
+      if (!o) ups.push({ slug: p.slug, isNew: true, fields: f });
+      else if (Object.keys(f).length) { var u = { slug: p.slug, fields: f }; if ('stock' in f && o.stock != null && p.stock != null) u.stockDelta = p.stock - o.stock; ups.push(u); }
+    });
+    old.products.forEach(function (o) { if (!curP[o.slug]) dels.push(o.slug); });
+    if (ups.length || dels.length) { out.products = { upsert: ups, delete: dels }; any = true; }
+
+    var oldO = byKey(old.orders, 'id'), ords = [];
+    cur.orders.forEach(function (o) {
+      var p = oldO[o.id]; if (!p) return;
+      var set = {}, c = { id: o.id };
+      ORDER_KEYS.forEach(function (k) { if (!same(o[k], p[k])) set[k] = o[k]; });
+      var added = (o.events || []).slice((p.events || []).length);
+      if (Object.keys(set).length) c.set = set;
+      if (added.length) c.addEvents = added;
+      if (o._notify) c.notify = o._notify;
+      if (o._quoteMessage) c.quoteMessage = o._quoteMessage;
+      if (o._refundReason) c.refundReason = o._refundReason;
+      if (c.set || c.addEvents || c.notify) ords.push(c);
+    });
+    if (ords.length) { out.orders = ords; any = true; }
+
+    var oldD = byKey(old.discounts, 'code'), curD = byKey(cur.discounts, 'code'), dUp = [], dDel = [];
+    cur.discounts.forEach(function (d) { if (!oldD[d.code] || !same(d, oldD[d.code])) dUp.push(d); });
+    old.discounts.forEach(function (d) { if (!curD[d.code]) dDel.push(d.code); });
+    if (dUp.length || dDel.length) { out.discounts = { upsert: dUp, delete: dDel }; any = true; }
+
+    if (!same(cur.settings, old.settings)) { out.settings = cur.settings; any = true; }
+    if (!same(cur.shipping, old.shipping)) { out.shipping = cur.shipping; any = true; }
+    var notes = {};
+    Object.keys(cur.customerNotes || {}).forEach(function (k) { if ((cur.customerNotes[k] || '') !== ((old.customerNotes || {})[k] || '')) notes[k] = cur.customerNotes[k]; });
+    if (Object.keys(notes).length) { out.customerNotes = notes; any = true; }
+    var curS = byKey(cur.subscribers, 'email'), gone = (old.subscribers || []).filter(function (x) { return !curS[x.email]; }).map(function (x) { return x.email; });
+    if (gone.length) { out.subscribers = { delete: gone }; any = true; }
+    return any ? out : null;
+  }
+  function clearTransient(s) { (s.orders || []).forEach(function (o) { delete o._notify; delete o._quoteMessage; delete o._refundReason; }); }
+
+  // Photos added in the product editor are kept as data until saved; upload them to Netlify Blobs first.
+  function uploadPhotos(ch) {
+    var jobs = [];
+    ((ch.products && ch.products.upsert) || []).forEach(function (u) {
+      (u.fields.images || []).forEach(function (src, i) {
+        if (!/^data:image\//.test(src)) return;
+        jobs.push(fetch(src).then(function (r) { return r.blob(); }).then(function (blob) {
+          return api('/api/admin/uploads', { method: 'POST', headers: { 'content-type': blob.type }, body: blob });
+        }).then(function (d) {
+          u.fields.images[i] = d.url;
+          var p = state.products.filter(function (x) { return x.slug === u.slug; })[0];
+          if (p) p.images = p.images.map(function (x) { return x === src ? d.url : x; });
+        }));
+      });
+    });
+    return Promise.all(jobs);
+  }
+  function notify() { if (window.MHAdmin && window.MHAdmin.refreshView) window.MHAdmin.refreshView(); }
+  function status(text, error) { if (window.MHAdmin && window.MHAdmin.saveStatus) window.MHAdmin.saveStatus(text, error); }
+
+  // Saves in the background, one save at a time. Returns true straight away so the admin stays quick;
+  // if the server refuses a change, the admin shows why and reloads what's really saved.
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); return true; }
-    catch (e) { return false; } // storage full or blocked: keep working in memory
+    if (!state || !synced) return false;
+    pending++; status('Saving…');
+    queue = queue.then(function () {
+      var ch = changes(state, synced);
+      clearTransient(state);
+      if (!ch) return;
+      var sentAs = null;
+      return uploadPhotos(ch).then(function () {
+        sentAs = JSON.stringify(state);
+        return api('/api/admin/sync', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(ch) });
+      }).then(function (res) {
+        if (JSON.stringify(state) === sentAs) { setState(res.state); notify(); }
+        else synced = clone(res.state); // more edits were made meanwhile: they're saved next
+        if (res.notes && res.notes.length && window.MHAdmin) window.MHAdmin.toast(res.notes[0]);
+      });
+    }).then(function () {
+      if (--pending === 0) status('All changes saved');
+    }, function (err) {
+      pending = Math.max(0, pending - 1);
+      status('Not saved: ' + err.message, true);
+      if (window.MHAdmin) window.MHAdmin.toast('Not saved: ' + err.message);
+      return refresh().catch(function () { /* keep what's on screen */ });
+    });
+    return true;
   }
-  function reset() { state = defaults(); save(); return state; }
-  function clearSample() { load(); state.orders = state.orders.filter(function (o) { return !o.sample; }); state.sampleData = false; save(); }
+  function saved() { return queue; } // resolves once everything has been sent
+  function reset() { return state; }
+  function clearSample() { /* the live admin has no sample data */ }
 
   var trafficCache = null;
   function traffic() {
-    load();
-    if (!state.sampleData) return [];
-    if (!trafficCache) trafficCache = buildSampleTraffic(state.orders.filter(function (o) { return o.sample; }), new Date());
-    return trafficCache;
+    if (!state || !state.traffic) return [];
+    return state.traffic.days || [];
   }
+  function trafficBreakdown(range) { return state && state.traffic && state.traffic.breakdowns ? state.traffic.breakdowns[range] || null : null; }
 
   // ---------- postcode → zone ----------
   // Comma-separated: "3030", "3000-3099", or "Tarneit 3029" (a suburb with its postcode, for postcodes split between zones).
@@ -741,8 +460,8 @@
   }
 
   window.MHData = {
+    init: init, refresh: refresh, saved: saved, defaults: defaults, trafficBreakdown: trafficBreakdown,
     mailingList: mailingList, load: load, save: save, reset: reset, clearSample: clearSample, traffic: traffic,
-    zoneFor: zoneFor, parsePostcodes: parsePostcodes, customers: customers, slugify: slugify, dayKey: dayKey, startOfDay: startOfDay, DAY: DAY,
-    SOURCES: SOURCES, DEVICES: DEVICES, PAGES: PAGES, HOURS: HOURS, LOCATIONS: LOCATIONS
+    zoneFor: zoneFor, parsePostcodes: parsePostcodes, customers: customers, slugify: slugify, dayKey: dayKey, startOfDay: startOfDay, DAY: DAY
   };
 })();
