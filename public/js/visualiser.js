@@ -1504,22 +1504,20 @@ function keepMirrorInView() {
   if (mirrorViewFit() <= want) return;
   const start = { wall: state.mirrorWall, s: state.place.s };
   const walls = [start.wall].concat(L.walls.map((w) => w.i).filter((i) => i !== start.wall && fits(L.walls[i], mirrorDef())));
+  // Best spot: one where the whole mirror fits (nearest the plan, its own wall first); failing that, the
+  // spot where the least of it is cut off.
   let best = null;
   for (const wi of walls) {
     const len = L.walls[wi].len, from = wi === start.wall ? start.s : len / 2;
-    const tries = [];
-    for (let s = 0.05; s < len; s += 0.1) tries.push(s);
-    tries.sort((a, b) => Math.abs(a - from) - Math.abs(b - from));
     state.mirrorWall = wi;
-    for (const sv of tries) {
+    for (let sv = 0.05; sv < len; sv += 0.1) {
       state.place.s = sv;
       placeMirror();
       const fit = mirrorViewFit();
-      const score = fit + (wi === start.wall ? 0 : 0.15) + Math.abs(state.place.s - from) * 0.01;
+      const score = (fit <= want ? 0 : 10 + fit) + (wi === start.wall ? 0 : 1) + Math.abs(state.place.s - from) * 0.01;
       if (!best || score < best.score) best = { score, wall: wi, s: state.place.s };
-      if (fit <= want) break;
     }
-    if (best && best.score <= want + 0.15) break;
+    if (best.score < 1) break; // fits on its own wall
   }
   state.mirrorWall = best.wall;
   state.place.s = best.s;
