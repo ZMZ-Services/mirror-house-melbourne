@@ -19,7 +19,9 @@ export default async (req) => {
   const row = (await query("SELECT id, total FROM orders WHERE square_order_id = $1 AND payment IN ('quote_sent', 'awaiting_quote')", [pay.order_id])).rows[0];
   if (!row) {
     // Checkout card payments are already recorded. Anything else (e.g. an old quote link) is flagged for checking.
-    const known = await query('SELECT 1 FROM orders WHERE square_payment_id = $1 OR square_order_id = $2', [pay.id, pay.order_id]);
+    // Checkout card payments carry the order number as their reference, even before "paid" is saved.
+    const ref = /^\d{1,9}$/.test(String(pay.reference_id || '')) ? Number(pay.reference_id) : -1;
+    const known = await query('SELECT 1 FROM orders WHERE square_payment_id = $1 OR square_order_id = $2 OR (id = $3 AND square_payment_id IS NULL AND payment_link_id IS NULL)', [pay.id, pay.order_id, ref]);
     const seen = await query("SELECT 1 FROM activity_log WHERE action = 'payment.unmatched' AND entity_id = $1", [String(pay.id)]);
     if (!known.rowCount && !seen.rowCount) {
       await logActivity({ query }, { actorType: 'system', action: 'payment.unmatched', entity: 'payment', entityId: pay.id,

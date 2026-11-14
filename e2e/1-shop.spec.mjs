@@ -113,3 +113,34 @@ test('newsletter sign-up from the footer', async ({ page }, info) => {
   await expect(page.locator('#newsletter-status')).toContainText('on the list');
   expect((await sql('SELECT 1 FROM subscribers WHERE email = $1', [email])).rowCount).toBe(1);
 });
+
+test('if the reply is lost after paying, reloading and paying again charges once', async ({ page }, info) => {
+  const email = 'lostreply-' + info.project.name + '@example.com';
+  await page.goto('/product.html?slug=' + SLUG);
+  await page.locator('[data-detail-add="' + SLUG + '"]').click();
+  await page.goto('/checkout.html');
+  await fillCheckout(page, email);
+  await page.locator('#fake-card').fill('4111 1111 1111 1111');
+  // The server takes the payment, but the reply never reaches the browser.
+  let dropped = false;
+  await page.route('**/api/orders', async (route) => {
+    if (dropped) return route.continue();
+    dropped = true;
+    await route.fetch();
+    await route.abort('connectionreset');
+  });
+  await page.locator('#co-submit').click();
+  await expect(page.locator('#co-msg')).toContainText('won\'t be charged twice');
+  // The customer reloads and pays again.
+  await page.reload();
+  await fillCheckout(page, email);
+  await page.locator('#fake-card').fill('4111 1111 1111 1111');
+  await page.locator('#co-submit').click();
+  await expect(page.locator('.co-confirm h2')).toContainText(/Order #\d+ confirmed/);
+  const rows = (await sql('SELECT id, payment FROM orders WHERE email = $1', [email])).rows;
+  expect(rows.length).toBe(1);
+  expect(rows[0].payment).toBe('paid');
+  const calls = await (await fetch('http://127.0.0.1:4010/__calls')).json();
+  const charges = calls.filter((c) => c.url === '/square/v2/payments' && c.body && c.body.buyer_email_address === email);
+  expect(new Set(charges.map((c) => c.body.idempotency_key)).size).toBe(1);
+});

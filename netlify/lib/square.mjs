@@ -36,7 +36,7 @@ async function call(method, path, body) {
       method,
       headers: { authorization: 'Bearer ' + process.env.SQUARE_ACCESS_TOKEN, 'square-version': VERSION, 'content-type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(Number(process.env.SQUARE_TIMEOUT_MS) || 8000)
+      signal: AbortSignal.timeout(Number(process.env.SQUARE_TIMEOUT_MS) || 4000) // two tries fit in the function's time limit
     });
   } catch (err) {
     return { ok: false, status: 0, errors: [{ code: 'NETWORK', detail: err.message }] };

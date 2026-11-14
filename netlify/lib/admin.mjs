@@ -306,7 +306,7 @@ async function applyOrderChange(oc, user, run) {
     const delivery = cents(set.delivery, { nullable: false });
     const total = row.subtotal - row.discount + delivery;
     let link = null, linkNote = '';
-    if (row.payment_link_id) await deletePaymentLink(row.payment_link_id); // the old quote's link stops working
+    if (row.payment_link_id && !(await deletePaymentLink(row.payment_link_id)).ok) added.push(event('The previous Square payment link couldn\'t be switched off. Deactivate it in Square (Online → Payment links) so it can\'t be paid.'));
     if (squareConfigured()) {
       const r = await createPaymentLink({ orderId: id, amount: total, email: row.email, idempotencyKey: 'quote-' + id + '-' + total + '-' + Date.now(), redirectUrl: siteUrl() + '/' });
       if (r.ok) link = r; else linkNote = r.message;
@@ -332,7 +332,7 @@ async function applyOrderChange(oc, user, run) {
       if (row.stock_taken) await returnStock(db, row);
       await db.query("UPDATE orders SET payment = 'voided', fulfilment = 'cancelled', updated_at = now() WHERE id = $1", [id]);
     });
-    if (row.payment_link_id) await deletePaymentLink(row.payment_link_id); // a cancelled quote can't be paid
+    if (row.payment_link_id && !(await deletePaymentLink(row.payment_link_id)).ok) added.push(event('The Square payment link couldn\'t be switched off. Deactivate it in Square (Online → Payment links) so it can\'t be paid.'));
     log.push('Cancelled the request');
     row = await loadOrder(id);
   } else if ((set.payment === 'refunded' || set.payment === 'partially_refunded') && ['paid', 'partially_refunded'].includes(row.payment)) {

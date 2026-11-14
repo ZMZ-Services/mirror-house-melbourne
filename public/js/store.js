@@ -1113,6 +1113,13 @@
     // key, so the server and Square treat it as the same payment, never a second charge. A clear "no" (declined card,
     // changed price, sold out) starts a fresh attempt.
     var payKey = null, payToken = null;
+    // Kept for this browser tab too, so reloading the page after a dropped connection still can't charge twice.
+    // It only applies to the same bag, total and email; it's cleared once the order is confirmed or declined.
+    var PAY = 'mh-pay-attempt';
+    function attemptFor(sig) { try { var a = JSON.parse(sessionStorage.getItem(PAY) || 'null'); return a && a.sig === sig ? a : null; } catch (e) { return null; } }
+    var paySig = null;
+    function keepAttempt(sig) { paySig = sig; try { sessionStorage.setItem(PAY, JSON.stringify({ sig: sig, key: payKey, token: payToken })); } catch (e) { /* storage blocked */ } }
+    function dropAttempt() { payKey = null; payToken = null; try { sessionStorage.removeItem(PAY); } catch (e) { /* storage blocked */ } }
     function loadSquare() {
       if (window.Square) return Promise.resolve();
       return new Promise(function (resolve, reject) {
@@ -1146,6 +1153,7 @@
 
     function confirmation(number, t, data, previewNote) {
       writeCart({});
+      if (!PREVIEW) dropAttempt();
       var gaItems = lines.map(function (l) { return gaItem(l.product, l.qty); });
       if (t.quote) track('generate_lead', { currency: 'AUD', value: t.total / 100, lead_source: 'delivery_quote', items: gaItems });
       else track('purchase', { transaction_id: String(number || ''), currency: 'AUD', value: t.total / 100, shipping: (t.delivery || 0) / 100, coupon: data.discount_code || undefined, items: gaItems });
@@ -1204,11 +1212,15 @@
       submit.disabled = true;
       msg.textContent = t.quote ? 'Sending your request…' : 'Processing your payment…';
       // A retry after a lost reply re-sends the same card token with the same key (see payKey above).
+      var sig = JSON.stringify([data.items, t.total, data.email, data.method]);
+      var saved = !t.quote && attemptFor(sig);
+      if (saved) { payKey = saved.key; payToken = saved.token; } else if (payKey && paySig !== sig) { payKey = null; payToken = null; } // bag, total or email changed
       var tokenP = t.quote ? Promise.resolve(null) : payKey && payToken ? Promise.resolve(payToken) : card ? card.tokenize().then(function (r) { if (r.status !== 'OK') throw new Error('Please check your card details.'); payToken = r.token; return r.token; }) : Promise.reject(new Error('Card payments aren\'t available yet.'));
       tokenP.then(function (token) {
         if (token) data.source_id = token;
         payKey = payKey || rid();
         data.idempotency_key = payKey;
+        if (token) keepAttempt(sig);
         data.session_id = VISIT.sid;
         data.expected_total = t.total; // the server refuses the payment if its total differs from what was shown
         return fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) })
@@ -1220,7 +1232,7 @@
           }, function () { var e = new Error('Your connection dropped. Please try again: you won\'t be charged twice.'); e.unsure = true; throw e; });
       }).then(function (res) {
         if (res.status === 202) { var p = new Error(res.d.error); p.pending = true; throw p; }
-        if (!res.ok) { var e = new Error(res.d.error || 'We couldn\'t place the order.'); e.field = res.d.field; if (res.status !== 409 || res.d.field) { payKey = null; payToken = null; } throw e; }
+        if (!res.ok) { var e = new Error(res.d.error || 'We couldn\'t place the order.'); e.field = res.d.field; if (res.status !== 409 || res.d.field) dropAttempt(); throw e; }
         t.total = res.d.total_cents != null ? res.d.total_cents : t.total;
         confirmation('#' + res.d.order_id, t, data);
       }).catch(function (err) {

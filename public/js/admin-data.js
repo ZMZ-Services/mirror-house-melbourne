@@ -358,7 +358,12 @@
       (out[key] || []).forEach(function (x) {
         var l = L[x[id]], before = S[x[id]];
         if (!l || !before) return;
-        Object.keys(l).forEach(function (k) { if (!same(l[k], before[k])) x[k] = clone(l[k]); });
+        Object.keys(l).forEach(function (k) {
+          if (same(l[k], before[k])) return;
+          if (k === 'stock' && typeof l.stock === 'number' && typeof before.stock === 'number' && typeof x.stock === 'number') x.stock = Math.max(0, x.stock + l.stock - before.stock); // keep sales made meanwhile
+          else if (k === 'events' && Array.isArray(x.events)) x.events = x.events.concat(clone((l.events || []).slice((before.events || []).length))); // server's notes, then the new ones
+          else x[k] = clone(l[k]);
+        });
       });
       (local[key] || []).forEach(function (l) { if (!S[l[id]] && !O[l[id]]) out[key].unshift(clone(l)); }); // added meanwhile
       out[key] = (out[key] || []).filter(function (x) { return !S[x[id]] || L[x[id]]; }); // removed meanwhile
@@ -489,7 +494,7 @@
   }
 
   window.MHData = {
-    init: init, refresh: refresh, saved: saved, defaults: defaults, trafficBreakdown: trafficBreakdown,
+    init: init, refresh: refresh, saved: saved, defaults: defaults, trafficBreakdown: trafficBreakdown, _rebase: rebase,
     mailingList: mailingList, load: load, save: save, reset: reset, clearSample: clearSample, traffic: traffic,
     zoneFor: zoneFor, parsePostcodes: parsePostcodes, customers: customers, slugify: slugify, dayKey: dayKey, startOfDay: startOfDay, DAY: DAY
   };
