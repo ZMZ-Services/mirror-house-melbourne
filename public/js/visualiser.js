@@ -850,6 +850,7 @@ function resize() {
     needsRender = true;
   }
   if (state.step === 2) layoutEditor();
+  else if (state.step >= 3 && !state.movedByHand) keepMirrorInView();
 }
 
 // Match the 3D camera's lens to the photo: the photo "covers" the viewport, eye level where it was.
@@ -1280,12 +1281,20 @@ function syncExtraUi() {
   if (lbl3) lbl3.textContent = txt;
 }
 // Move the current mirror along the wall so it doesn't sit on top of the ones already placed.
+// True when the current mirror, centred at s on wall wi, keeps a gap from every extra mirror on that wall.
+function clearOfExtras(wi, s) {
+  const w = footprint(mirror.def).w, gap = 0.25;
+  return extraMirrors.every((m) => {
+    if (m.wallIndex !== wi) return true;
+    const fw = footprint(m.def, m.turned).w;
+    return s + w / 2 + gap / 2 < m.s - fw / 2 || s - w / 2 - gap / 2 > m.s + fw / 2;
+  });
+}
 function offsetFromExtras() {
   if (!extraMirrors.length || !mirror || !state.layout || !state.place) return;
   const wall = currentWall(); if (!wall) return;
-  const def = footprint(mirror.def), gap = 0.25;
-  const taken = extraMirrors.filter((m) => m.wallIndex === state.mirrorWall).map((m) => { const fw = footprint(m.def, m.turned).w; return [m.s - fw / 2, m.s + fw / 2]; });
-  const free = (s) => s - def.w / 2 > 0.04 && s + def.w / 2 < wall.len - 0.04 && taken.every(([a, b]) => s + def.w / 2 + gap / 2 < a || s - def.w / 2 - gap / 2 > b);
+  const def = footprint(mirror.def);
+  const free = (s) => s - def.w / 2 > 0.04 && s + def.w / 2 < wall.len - 0.04 && clearOfExtras(state.mirrorWall, s);
   if (free(state.place.s)) return;
   let best = null;
   for (let d = 0.05; d < wall.len; d += 0.05) {
@@ -1300,6 +1309,7 @@ function addAnotherMirror() {
   extraMirrors.push(mirror);
   mirror = null;
   buildMirror();
+  state.movedByHand = false;
   offsetFromExtras();
   syncExtraUi();
   goStep(3);
@@ -1612,7 +1622,6 @@ function initPointer() {
     if (!p) return;
     const c = wallCoords(wl, p);
     drag = { id: e.pointerId, offS: state.place.s - c.s, offH: state.place.h - c.h };
-    state.movedByHand = true;
     controls.enabled = false;
     canvas.setPointerCapture(e.pointerId);
     el.viewport.classList.add('is-dragging');
@@ -1634,6 +1643,7 @@ function initPointer() {
       const c = wallCoords(wl, p);
       state.place.s = c.s + drag.offS;
       if (!isLeaning()) state.place.h = c.h + drag.offH;
+      state.movedByHand = true;
       placeMirror();
       return;
     }
@@ -1711,11 +1721,11 @@ function keepMirrorInView() {
   const L = state.layout;
   if (!mirror || !L || !camera) return;
   const want = 0.9; // a small margin inside the edges
-  if (mirrorViewFit() <= want) return;
+  if (mirrorViewFit() <= want && clearOfExtras(state.mirrorWall, state.place.s)) return;
   const start = { wall: state.mirrorWall, s: state.place.s };
   const walls = [start.wall].concat(L.walls.map((w) => w.i).filter((i) => i !== start.wall && fits(L.walls[i], mirrorDef())));
   // Best spot: one where the whole mirror fits (nearest the plan, its own wall first); failing that, the
-  // spot where the least of it is cut off.
+  // spot where the least of it is cut off. Never on top of another mirror.
   let best = null;
   for (const wi of walls) {
     const len = L.walls[wi].len, from = wi === start.wall ? start.s : len / 2;
@@ -1724,7 +1734,7 @@ function keepMirrorInView() {
       state.place.s = sv;
       placeMirror();
       const fit = mirrorViewFit();
-      const score = (fit <= want ? 0 : 10 + fit) + (wi === start.wall ? 0 : 1) + Math.abs(state.place.s - from) * 0.01;
+      const score = (clearOfExtras(wi, state.place.s) ? 0 : 100) + (fit <= want ? 0 : 10 + fit) + (wi === start.wall ? 0 : 1) + Math.abs(state.place.s - from) * 0.01;
       if (!best || score < best.score) best = { score, wall: wi, s: state.place.s };
     }
     if (best.score < 1) break; // fits on its own wall
@@ -1770,11 +1780,17 @@ function findCornerIssue(L) {
   return null;
 }
 
+// The written warning is a live region: write it only when it changes, and not mid-drag, so a screen reader
+// says it once.
+function syncCornerCheck() {
+  const text = cornerIssue ? cornerIssue.text : '';
+  if (!activeDrag && guideEl.check.textContent !== text) guideEl.check.textContent = text;
+}
 function updateRoomText() {
   const L = state.layout;
   if (!L) return;
   cornerIssue = findCornerIssue(L);
-  guideEl.check.textContent = cornerIssue ? cornerIssue.text : '';
+  syncCornerCheck();
   el.roomLine.innerHTML = L.nudges.length
     ? 'Nearly there. Move the dot with the note.'
     : `Room about <strong>${half(Math.max(1, L.size.width))} × ${half(Math.max(1, L.size.depth))} m</strong>`;
@@ -1974,6 +1990,7 @@ function drawEditor() {
   // While asking "How many walls?", show the photo on its own.
   const asking = guide.phase === 'walls';
   el.dotLayer.hidden = asking;
+  el.undo.disabled = !history.length;
   if (asking) {
     el.svg.innerHTML = ''; el.nudgeLayer.innerHTML = ''; el.hand.hidden = true;
     el.addCorner.disabled = el.removeCorner.disabled = true;
@@ -2046,7 +2063,6 @@ function drawEditor() {
     el.hand.style.left = `${q[0]}px`; el.hand.style.top = `${q[1]}px`;
   }
 
-  el.undo.disabled = !history.length;
   el.addCorner.disabled = P.length >= 6;
   el.removeCorner.disabled = !P.some((p) => !p.edge) || P.length <= 2;
 }
@@ -2134,6 +2150,15 @@ function chooseWalls(kind) {
   guide.phase = guide.phase === 'free' ? 'free' : 'guide'; guide.k = 0;
   onPostsChanged(true);
 }
+// Keeps the guide on the right dot when corners are added or removed mid-guide: dots from post i on move by
+// `by` posts. A new corner (by 1) is guided next if the guide had passed it; a removed one (by -1) hands on
+// to the dot that took its place.
+function guideShift(i, by) {
+  if (guide.phase !== 'guide') return;
+  if (by > 0) guide.k = Math.min(guide.k, 2 * i);
+  else if (guide.k >= 2 * i + 2) guide.k -= 2;
+  else guide.k = Math.min(guide.k, 2 * i);
+}
 function guideNext() {
   if (guide.phase !== 'guide') return;
   guide.k++;
@@ -2151,9 +2176,17 @@ function undo() {
   const prev = history.pop();
   if (!prev) return;
   const s = JSON.parse(prev);
+  // Undoing the walls answer on an upload asks the question again; mid-guide, the guide steps back to the
+  // first dot that changed.
+  if (!history.length && !state.preset) guide.phase = 'walls';
+  else if (guide.phase === 'guide') {
+    const first = s.posts.findIndex((p, i) => JSON.stringify(p) !== JSON.stringify(state.posts[i]));
+    if (first >= 0) guide.k = Math.min(guide.k, 2 * first);
+  }
   state.posts = s.posts; state.horizon = s.horizon;
   syncSettingsUi();
   onPostsChanged(true);
+  if (guide.phase === 'walls') guideEl.question.querySelector('button').focus({ preventScroll: true });
 }
 
 function onPostsChanged(structural) {
@@ -2273,6 +2306,7 @@ function initEditor() {
       activeDrag.dot.classList.remove('active');
       activeDrag = null;
       el.loupe.hidden = true;
+      syncCornerCheck();
       if (placed) guideNext(); else drawEditor();
     }
     pointers.delete(e.pointerId);
@@ -2291,7 +2325,13 @@ function initEditor() {
     const dot = e.target.closest('.dot');
     if (!dot) return;
     const g = guideDot();
-    if (e.key === 'Enter' && g && g.i === +dot.dataset.post && g.end === dot.dataset.end) { e.preventDefault(); guideNext(); return; }
+    if (e.key === 'Enter' && g && g.i === +dot.dataset.post && g.end === dot.dataset.end) {
+      e.preventDefault();
+      guideNext();
+      const n = guideDot();
+      if (n) el.dotLayer.querySelector(`.dot[data-post="${n.i}"][data-end="${n.end}"]`).focus({ preventScroll: true });
+      return;
+    }
     const dirs = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     const d = dirs[e.key];
     if (!d) return;
@@ -2319,6 +2359,7 @@ function initEditor() {
     const a = P[j], b = P[j + 1];
     P.splice(j + 1, 0, { fx: (a.fx + b.fx) / 2, fy: (a.fy + b.fy) / 2, cx: (a.cx + b.cx) / 2, cy: (a.cy + b.cy) / 2 });
     selectedPost = j + 1;
+    guideShift(j + 1, 1);
     onPostsChanged(true);
   });
   el.removeCorner.addEventListener('click', () => {
@@ -2330,6 +2371,7 @@ function initEditor() {
     snapshot();
     P.splice(i, 1);
     selectedPost = -1;
+    guideShift(i, -1);
     onPostsChanged(true);
   });
   document.querySelectorAll('[data-layout]').forEach((b) => b.addEventListener('click', () => chooseWalls(b.dataset.layout)));
@@ -2542,8 +2584,8 @@ function goStep(n) {
   needsRender = true;
   const title = $(`#step-${n}-title`);
   if (prev !== n && title) title.focus({ preventScroll: true });
-  // Sheet height changes with the step: keep sizes in sync, and keep the mirror in view unless it was placed by hand.
-  requestAnimationFrame(() => { resize(); if (n >= 3 && !state.movedByHand) keepMirrorInView(); });
+  // Sheet height changes with the step: keep sizes in sync (resize also keeps the mirror in view).
+  requestAnimationFrame(resize);
 }
 
 function initSteps() {
@@ -2607,6 +2649,11 @@ function boot() {
         key: keyLight ? keyLight.intensity : 0, dir: lightDir.toArray(),
         toneMapping: renderer ? renderer.toneMapping : null
       };
+    },
+    // Every mirror in the room (extra ones first, the current one last): wall, centre along it and width.
+    mirrors() {
+      const one = (m, wall, s) => ({ wall, s, w: footprint(m.def, m.turned).w });
+      return extraMirrors.map((m) => one(m, m.wallIndex, m.s)).concat(mirror ? [one(mirror, state.mirrorWall, state.place.s)] : []);
     },
     setPosts(posts) { state.posts = posts.map((p) => ({ ...p })); onPostsChanged(true); },
     mirrorScreenPoint() {

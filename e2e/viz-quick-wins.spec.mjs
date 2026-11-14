@@ -49,3 +49,26 @@ test('phone: the 3D view gets most of the screen in the last step', async ({ pag
   expect(v.height).toBeGreaterThan(vh * 0.45);
   await expect(page.locator('#add-to-bag-btn')).toBeInViewport();
 });
+
+test('a tap on the mirror without dragging still lets the view keep it on screen', async ({ page }) => {
+  await openSample(page, 'living');
+  await finish(page);
+  const pt = await page.evaluate(() => window.mhViz.mirrorScreenPoint());
+  await page.mouse.move(pt.x, pt.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  expect(await page.evaluate(() => window.mhViz.state.movedByHand)).toBe(false);
+});
+
+test('another mirror is placed beside the first, never on top of it, and stays in view', async ({ page }) => {
+  for (const key of SAMPLES) {
+    await openSample(page, key);
+    await finish(page);
+    await page.locator('#add-mirror-btn:visible, #add-mirror-btn-3:visible').first().click();
+    await expect.poll(() => page.evaluate(() => window.mhViz.mirrors().length)).toBe(2);
+    await page.waitForTimeout(150); // let the step's resize run
+    const [a, b] = await page.evaluate(() => window.mhViz.mirrors());
+    if (a.wall === b.wall) expect(Math.abs(a.s - b.s), key).toBeGreaterThan((a.w + b.w) / 2);
+    expect(await page.evaluate(() => window.mhViz.mirrorViewFit()), key).toBeLessThanOrEqual(1);
+  }
+});

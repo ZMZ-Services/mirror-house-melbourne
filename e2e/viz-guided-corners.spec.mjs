@@ -191,3 +191,70 @@ test('on a phone-sized editor the photo fills the width and edge dots stay on sc
     expect(left.y + left.height / 2).toBeLessThan(card.y - 10);
   }
 });
+
+test('adding, removing and undoing corners mid-guide keeps the prompt on the right dot', async ({ page }) => {
+  await uploadPhoto(page, 'cropped-corner');
+  await page.click('#walls-two');
+  const line = page.locator('#corner-line');
+  const g = () => page.evaluate(() => window.mhViz.guide);
+  // Past the corner (on the right edge's dots), then add a corner: the guide goes to the new corner.
+  for (let k = 0; k < 4; k++) await page.click('#guide-next-btn');
+  await expect(line).toContainText('Dot 5 of 6');
+  await page.click('#add-corner-btn');
+  const added = await g();
+  expect(added.dot.end).toBe('floor');
+  expect(await page.evaluate((i) => !window.mhViz.state.posts[i].edge, added.dot.i)).toBe(true);
+  expect(await page.evaluate(() => window.mhViz.state.posts.length)).toBe(4);
+  await expect(line).toContainText(`Dot ${added.k + 1} of 8`);
+  // Undo takes the corner away again and the guide steps back with it.
+  await page.click('#undo-btn');
+  expect(await page.evaluate(() => window.mhViz.state.posts.length)).toBe(3);
+  expect((await g()).k).toBeLessThanOrEqual(added.k);
+  // Undo past the walls answer asks the question again.
+  while (await page.locator('#undo-btn').isEnabled()) await page.click('#undo-btn');
+  await expect(page.locator('#walls-q')).toBeVisible();
+  await expect(page.locator('#walls-q button').first()).toBeFocused();
+});
+
+test('removing a corner mid-guide hands on to the next dot', async ({ page }) => {
+  await uploadPhoto(page, 'cropped-corner');
+  await page.click('#walls-three');
+  for (let k = 0; k < 6; k++) await page.click('#guide-next-btn');
+  await expect(page.locator('#corner-line')).toContainText('Dot 7 of 8');
+  await page.click('#remove-corner-btn'); // the last corner goes
+  await expect(page.locator('#corner-line')).toContainText('Dot 5 of 6');
+  const d = await page.evaluate(() => window.mhViz.guide.dot);
+  expect(d).toEqual({ i: 2, end: 'floor' });
+});
+
+test('Enter on the guided dot moves focus to the next one', async ({ page }) => {
+  await uploadPhoto(page, 'one-wall');
+  await page.click('#walls-one');
+  await dot(page, 0, 'floor').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#corner-line')).toContainText('Dot 2 of 4');
+  await expect(dot(page, 0, 'ceil')).toBeFocused();
+});
+
+test('the written warning is not rewritten while a dot is being dragged', async ({ page }) => {
+  await uploadPhoto(page, 'tilted');
+  await page.click('#walls-three');
+  await page.click('#guide-skip-btn');
+  const check = page.locator('#corner-check');
+  await page.evaluate(() => {
+    window.__writes = 0;
+    new MutationObserver(() => window.__writes++).observe(document.querySelector('#corner-check'), { childList: true, characterData: true, subtree: true });
+  });
+  await dot(page, 1, 'ceil').scrollIntoViewIfNeeded();
+  const f = await dot(page, 1, 'floor').boundingBox(), t = await dot(page, 1, 'ceil').boundingBox();
+  const x = t.x + t.width / 2, y = t.y + t.height / 2, dy = f.y - t.y + 40;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let k = 1; k <= 8; k++) await page.mouse.move(x, y + dy * k / 8, { steps: 2 });
+  // The warning is due (the dot is below its floor dot) but isn't written yet.
+  expect(await page.evaluate(() => window.mhViz.guide.issue)).toContain('below its floor dot');
+  expect(await page.evaluate(() => window.__writes)).toBe(0);
+  await page.mouse.up();
+  await expect(check).toContainText('below its floor dot');
+  expect(await page.evaluate(() => window.__writes)).toBe(1);
+});
