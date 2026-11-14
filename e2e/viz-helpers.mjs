@@ -37,7 +37,12 @@ export async function uploadPhoto(page, name) {
 
 // From "Tap the corners" (or "Pick a mirror") through to the finished view, with the first mirror.
 export async function finish(page) {
-  if (await page.locator('#step-2').isVisible()) await page.click('#looks-right-btn');
+  if (await page.locator('#step-2').isVisible()) {
+    // An uploaded photo first asks how many walls show: keep the usual three-wall start, then skip the dot-by-dot guide.
+    if (await page.locator('#walls-q').isVisible()) await page.click('#walls-three');
+    if (await page.locator('#guide-skip-btn').isVisible()) await page.click('#guide-skip-btn');
+    await page.click('#looks-right-btn');
+  }
   await expect(page.locator('#step-3')).toBeVisible();
   await page.click('#mirror-done-btn');
   await expect(page.locator('#step-4')).toBeVisible();
