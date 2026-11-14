@@ -4,31 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Admin | Mirror House Melbourne</title>
-  <!-- The admin must never appear in Google. On the live site it also sits behind Cloudflare Access. -->
+  <!-- The admin must never appear in Google. It opens only after signing in with Netlify Identity. -->
   <meta name="robots" content="noindex, nofollow, noarchive">
   <meta name="referrer" content="no-referrer">
   <link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
-  <!-- Sign-in -->
+  <!-- Sign-in (Netlify Identity) -->
   <div class="lock" id="lock" role="dialog" aria-modal="true" aria-labelledby="lock-title">
-    <form class="lock-card" id="lock-form" autocomplete="on">
+    <form class="lock-card" id="lock-form">
       <div class="lock-brand">MIRROR HOUSE</div>
       <h1 id="lock-title">Sign in to your admin</h1>
-      <p id="lock-intro">Enter your admin password.</p>
-      <input type="text" name="username" autocomplete="username" value="admin" hidden>
-      <div class="field">
-        <label for="lock-pass">Password</label>
-        <input id="lock-pass" type="password" autocomplete="current-password" required minlength="8">
-      </div>
-      <div class="field" id="lock-confirm-wrap" hidden>
-        <label for="lock-pass2">Confirm password</label>
-        <input id="lock-pass2" type="password" autocomplete="new-password" minlength="8">
-      </div>
+      <p id="lock-intro">Sign in with the email address your admin invitation was sent to.</p>
       <p class="small" id="lock-msg" role="alert" style="color:#8e1f0b;min-height:1.2em"></p>
       <button type="submit" class="btn primary" id="lock-btn">Sign in</button>
-      <p class="lock-note"><strong>Preview only.</strong> This password just locks the admin in this browser. On the live site this page is protected by Cloudflare Access (your email only) and a server sign-in, which your developer sets up.</p>
-      <button type="button" class="btn plain small" id="lock-reset">Forgot password? Reset this preview</button>
+      <p class="lock-note">Only people invited to this store can sign in. Forgot your password? Choose Sign in, then “Forgot password?”.</p>
     </form>
   </div>
 
@@ -43,11 +33,12 @@
       <input id="search" type="search" placeholder="Search orders, products, customers" autocomplete="off">
       <div class="search-results" id="search-results" hidden></div>
     </div>
+    <span class="save-status" id="save-status" role="status" aria-live="polite" hidden></span>
     <div class="top-user">
       <a class="btn top-store" href="index.html" title="Go to your shop. The Admin button there brings you back.">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l1.5-4h11L17 8M3 8v8h14V8M3 8h14M8 16v-4h4v4"/></svg><span>View store</span>
       </a>
-      <span class="avatar" aria-hidden="true">D</span><span class="name">Debbie</span>
+      <span class="avatar" aria-hidden="true"></span><span class="name"></span>
     </div>
   </header>
 
@@ -59,6 +50,7 @@
       <a class="nav-item" href="#/customers" data-nav="customers"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="7" r="3.5"/><path d="M3 17c1.2-3.2 3.8-5 7-5s5.8 1.8 7 5"/></svg>Customers</a>
       <a class="nav-item" href="#/mailing" data-nav="mailing"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="15" height="11" rx="1.5"/><path d="M3 5.5l7 5.5 7-5.5"/></svg>Mailing list</a>
       <a class="nav-item" href="#/analytics" data-nav="analytics"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 17V9M8 17V4M13 17v-6M18 17V7"/></svg>Analytics</a>
+      <a class="nav-item" href="#/activity" data-nav="activity"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg>Activity log</a>
       <a class="nav-item" href="#/discounts" data-nav="discounts"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M10 2h7v7l-8 8-7-7z"/><circle cx="13.5" cy="6.5" r="1.2"/></svg>Discounts</a>
       <div class="nav-sep"></div>
       <div class="nav-title">Store</div>
@@ -74,11 +66,13 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script src="js/admin-data.js"></script>
   <script src="js/admin-charts.js"></script>
   <script src="js/admin-app.js"></script>
   <script src="js/admin-orders.js"></script>
   <script src="js/admin-products.js"></script>
+  <script src="js/admin-activity.js"></script>
   <script src="js/admin-store.js"></script>
 </body>
 </html>

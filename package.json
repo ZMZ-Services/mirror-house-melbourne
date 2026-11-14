@@ -2,13 +2,22 @@
   "name": "mirror-house-melbourne",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy && wrangler d1 migrations apply DB --remote",
-    "db:migrate:local": "wrangler d1 migrations apply DB --local",
-    "db:migrate:remote": "wrangler d1 migrations apply DB --remote"
+    "build": "node scripts/build.mjs",
+    "migrate": "node scripts/migrate.mjs",
+    "dev": "node scripts/build.mjs && npx --yes netlify-cli@27.19.0 dev --offline",
+    "test": "node --test --test-concurrency=1 --test-timeout=30000 tests/*.test.mjs",
+    "e2e": "playwright test --trace off"
+  },
+  "dependencies": {
+    "@netlify/blobs": "11.1.7",
+    "@netlify/database": "2.0.1",
+    "pg": "8.23.1"
   },
   "devDependencies": {
-    "wrangler": "4.145.0"
+    "@playwright/test": "1.63.0"
   }
 }

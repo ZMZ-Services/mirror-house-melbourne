@@ -1,80 +1,108 @@
-# Mirror House Melbourne (demo store)
+# Mirror House Melbourne
 
-A demo storefront for architectural mirrors and artisan homewares, with a back-of-house dashboard and a 3D "try it in your room" visualiser. Hosted on a Cloudflare Worker with a D1 database, deployed by Cloudflare Workers Builds on every push to `main`.
+The online store for Mirror House Melbourne (architectural floor and wall mirrors, Point Cook VIC), hosted on Netlify.
+Customers browse, buy and pay by card through Square. The owner signs in to the admin to manage orders, products,
+the mailing list, discounts, delivery zones and settings. Everything is saved in a Postgres database (Netlify Database).
 
-Live: <https://mirror-house-melbourne.zarko-ddc.workers.dev>
+The shop's design, copy and layout are Debbie's own build (imported unchanged in PR #1). This repository adds the
+server side and wires her pages to it.
 
-## Layout
+## How it fits together
 
-| Path | What it is |
-| --- | --- |
-| `public/index.html` | Storefront home page |
-| `public/product.html`, `public/checkout.html` | Product page (`?slug=`) and checkout |
-| `public/visualiser.html` | Upload a room photo, mark the back wall, place a mirror in 3D with live reflections |
-| `public/admin-dashboard.html` | Back-of-house dashboard (KPIs, charts, unit economics, stock, cash, actions) plus live D1 figures |
-| `public/css/theme.css`, `public/js/store.js` | Storefront styles; catalogue, bag, quick view, product page and checkout logic |
-| `public/images/` | Original imagery generated with Higgsfield |
-| `src/worker.js` | Cloudflare Worker: serves `public/`, runs the JSON API |
-| `migrations/` | D1 schema and demo product seed |
-| `wrangler.jsonc` | Worker and D1 config (worker `mirror-house-melbourne`, ZMZ Services account) |
-
-## API
-
-| Route | Access | What it does |
+| Part | Where | What it does |
 | --- | --- | --- |
-| `GET /api/products` | public | Active catalogue from D1 |
-| `POST /api/newsletter` | public | `{ email }`: saves a newsletter signup |
-| `POST /api/orders` | public | `{ email, items: [{ slug, qty }], breakage_cover, white_glove }`: records a pending order. Prices come from D1, never the browser |
-| `GET /api/admin/summary` | open (demo) | Live 30-day revenue, orders, AOV, breakage-cover uptake, sales by category, low stock, recent orders, subscribers |
+| Shop pages | `public/*.html`, `public/js/store.js`, `public/css/` | Her storefront. Loads live products, prices and stock from `/api/products`, and the live settings from `/api/config.js`. |
+| Admin | `public/admin-dashboard.html`, `public/js/admin-*.js` | Her admin. Sign-in with Netlify Identity; data loads from `/api/admin/state` and changes save through `/api/admin/sync`. |
+| Functions | `netlify/functions/` | The API (one file per route; the route is in each file's `config.path`). |
+| Server code | `netlify/lib/` | Pricing, orders, Square, emails, admin changes, visit counting. |
+| Database | `netlify/database/migrations/` | Schema and the starting data (her 48 products, zones, WELCOME10, store settings). Netlify applies new migrations on every deploy. |
+| Build | `scripts/build.mjs` | Copies `public/` to `dist/`, sets the site address in canonical/Open Graph/schema.org links, writes `robots.txt`. |
 
-The dashboard (`/admin-dashboard.html`) and `/api/admin/*` are open with no login, because this is a demo store. Add authentication before using it with real data.
+### API
 
-## Deploying (Cloudflare Workers Builds)
+| Route | Who | What |
+| --- | --- | --- |
+| `GET /api/products` | public | Active products with live price, stock and photos |
+| `GET /api/config.js` | public | Square's public card-form details, GA4 ID, GST status, delivery zones (no secrets, no codes) |
+| `POST /api/orders` | public | The checkout. Re-prices on the server, holds stock, charges the card with Square, sends emails |
+| `POST /api/discounts/check` | public | Looks up one discount code for the Apply button |
+| `POST /api/newsletter` | public | Footer sign-up; sends the welcome email with WELCOME10 |
+| `POST /api/track` | public | Counts visits for the admin's Analytics page (no cookies) |
+| `POST /api/square/webhook` | Square | Confirms a delivery quote once the customer pays the Square link |
+| `GET /sitemap.xml` | public | Shop pages and every active product |
+| `GET /media/*` | public | Product photos uploaded in the admin (Netlify Blobs) |
+| `GET /api/admin/state` | admin | Everything the admin shows |
+| `POST /api/admin/sync` | admin | Saves admin changes; each one goes in the activity log |
+| `POST /api/admin/uploads` | admin | Uploads a product photo to Netlify Blobs |
 
-Cloudflare pulls this repo through its GitHub app and deploys on every push to `main`, the same way as the other ZMZ Workers. No API tokens or GitHub secrets are involved.
+Every `/api/admin` route checks the signed-in Netlify Identity user on the server (the token is verified with the
+site's Identity service), and the user needs the `admin` role or an email listed in `ADMIN_EMAILS`.
 
-Workers Builds settings:
+### Pricing (server side)
 
-| Setting | Value |
-| --- | --- |
-| Account | zarko@zmzservices.com.au (`zarko-ddc.workers.dev`) |
-| Worker name | `mirror-house-melbourne` (must match `name` in `wrangler.jsonc`) |
-| Repository | `ZMZ-Services/mirror-house-melbourne` |
-| Production branch | `main` |
-| Root directory | `/` |
-| Build command | *(empty)* |
-| Deploy command | `npm run deploy` |
-| Non-production branch builds | Off |
+The server never uses totals from the browser. It works out:
 
-`npm run deploy` runs `wrangler deploy` and then `wrangler d1 migrations apply DB --remote`.
+- **Delivery** by postcode zone, as set in Admin → Shipping & delivery (Zone 1 $49, Zone 2 $79, Zone 3 $109 at launch),
+  one fee per up to 4 mirrors. Pick-up in Point Cook is free.
+- **Outside the zones**: a quote request. No payment is taken; the admin sends a delivery quote with a Square
+  payment link, and the order confirms itself when the customer pays (Square webhook).
+- **Discount codes** from Admin → Discounts: active, start and end dates (Melbourne time), minimum spend, usage limit,
+  and first-order-only (WELCOME10: 10% off the mirrors, first paid order per email).
+- **Stock**: the products are locked while an order is priced, so two people can't buy the last one. Selling the last
+  unit marks it sold out. A declined card puts the stock back.
 
-- **Database.** `wrangler.jsonc` names the D1 database `mirror-house-db` without an ID, so the first deploy creates it automatically (Wrangler's automatic provisioning). Every deploy after that finds it by name and applies any new files in `migrations/`.
+## Environment variables
 
-## Single-file version
+Set these in Netlify (Site configuration → Environment variables). Never put values in the code.
 
-`single-file/mirror-house-melbourne.html` is the whole site in one HTML file (home, product, checkout, room visualiser, dashboard) for editing with Claude or sharing as a file. It runs without the Worker: `single-file/local-api.js` stands in for the API and keeps orders, signups and stock in the browser. Photos load from the live site (`public/_headers` allows that).
+| Name | Needed for | Notes |
+| --- | --- | --- |
+| `SQUARE_APPLICATION_ID` | Card payments | Square Developer Dashboard → your app → Credentials |
+| `SQUARE_ACCESS_TOKEN` | Card payments | Same page. Secret. |
+| `SQUARE_LOCATION_ID` | Card payments | Square Developer Dashboard → Locations |
+| `SQUARE_ENVIRONMENT` | Card payments | `production` for real payments, `sandbox` for testing |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | Quote payment links | Square Developer Dashboard → Webhooks, subscription to `payment.created` and `payment.updated` at `https://<site>/api/square/webhook` |
+| `SQUARE_WEBHOOK_URL` | Quote payment links (optional) | The exact URL the Square webhook subscription uses. Set it if that differs from `SITE_URL` + `/api/square/webhook` (e.g. after moving to a custom domain without updating Square) |
+| `RESEND_API_KEY` | Emails | From resend.com. Emails are off until it's set; orders still work. Secret. |
+| `EMAIL_FROM` | Emails | e.g. `Mirror House Melbourne <orders@mirrorhousemelbourne.com.au>` (domain verified in Resend) |
+| `ADMIN_EMAIL` | New-order alerts | Defaults to the store email in Admin → Settings |
+| `ADMIN_EMAILS` | Admin access (optional) | Comma-separated emails allowed in, as well as Identity users with the `admin` role |
+| `SITE_URL` | Links, sitemap | e.g. `https://mirrorhousemelbourne.com.au`. Defaults to Netlify's site address |
+| `GA_MEASUREMENT_ID` | Google Analytics (optional) | Used only if no ID is saved in Admin → Settings |
 
-Rebuild it after changing the site: `node scripts/build-single-file.mjs`. Changes made inside the single file don't flow back to the site by themselves; copy them into `public/` and rebuild.
+The database connection is provided by Netlify Database automatically (`NETLIFY_DB_URL`).
 
-## Run locally
+## Deploying
+
+Production deploys are made by hand with the Netlify CLI (`npx netlify-cli deploy --build --prod`), never from
+pull requests. Deploy previews and branch deploys are switched off in `netlify.toml`, because Netlify Database would
+give each one a copy of the production data behind a public link. The site isn't linked to Git in Netlify (it was a
+drag-and-drop site), so merging a pull request never deploys by itself.
+
+## Run it locally
+
+Needs Node 22 and a local Postgres.
 
 ```sh
 npm install
-npm run db:migrate:local
-npm run dev            # http://localhost:8787
+DATABASE_URL=postgres://user:pass@localhost:5432/mirrorhouse npm run migrate
+DATABASE_URL=postgres://user:pass@localhost:5432/mirrorhouse npm run dev      # http://localhost:8888
 ```
 
-## Status
+Without Square keys the checkout shows "Card payments are being set up". To try payments locally, use Square
+**sandbox** keys (`SQUARE_ENVIRONMENT=sandbox`) and Square's test card 4111 1111 1111 1111.
 
-Demo. The reviews, rating, seed products and freight settings (top of `src/worker.js` and `public/js/store.js`) are placeholders. Orders are recorded as `pending`; Square payment isn't connected.
+## Tests
 
-## Changes from the October 2026 review
+```sh
+npm test        # Function tests: pricing, promo, stock, payments, refunds, quotes, auth, uploads (local Postgres)
+npm run e2e     # Playwright, desktop and phone: shop checkout and the admin, under `netlify dev`
+```
 
-- Breakage cover now reads the same everywhere: an optional $12.50 add-on at checkout.
-- Hanging advice now says to fix into studs or masonry, not plasterboard alone.
-- The FAQ structured data matches the visible FAQ. White Glove and payment questions were added to the visible list, and the unused site-search markup was removed.
-- New Higgsfield imagery: hero background, Grand Royale banner, crating photo, product photos, sample rooms and a 1200×630 social share image.
-- Emoji trust icons are replaced with line icons. Contrast fixes bring the text to WCAG AA.
-- Screen-reader fixes: labelled close buttons, dialogs for the quick view and bag, a labelled newsletter field, star ratings with text labels, and a fixed heading order.
-- The newsletter form saves to D1 and confirms inline.
-- Copy uses Australian spelling and plainer wording.
+Both use a local Postgres (`mh_test` and `mh_e2e` databases, user `mh`; override with `TEST_DATABASE_URL` and
+`E2E_DATABASE_URL`) and stand-ins for Square, Netlify Identity and Resend, so no real keys are needed.
+
+## Changing the starting data
+
+`netlify/database/migrations/0002_seed.sql` was generated from Debbie's build by `node scripts/gen-seed.mjs`. Once the
+site is live, change products and settings in the admin, not here. Schema changes go in a new numbered migration.

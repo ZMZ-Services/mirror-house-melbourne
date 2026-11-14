@@ -1,0 +1,63 @@
+# Mirror House Melbourne on Netlify.
+# One deploy does everything: builds the site into dist/, applies any new database migrations to Netlify DB,
+# and publishes the Functions in netlify/functions (the /api/... routes are set in each Function's config).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# No deploy previews or branch deploys. Netlify Database gives each preview its own copy of the production data
+# behind a public link, so customer details must never land there. These builds are skipped ("exit 0" = don't build).
+# Production deploys are made from the CLI only (see README: continuous deployment is switched off in the dashboard).
+[context.deploy-preview]
+  ignore = "exit 0"
+
+[context.branch-deploy]
+  ignore = "exit 0"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Local: `npm run dev` builds dist/ once, then serves it with the Functions on http://localhost:8888.
+[dev]
+  publish = "dist"
+  framework = "#static"
+  port = 8888
+  autoLaunch = false
+
+# The admin page: never cached, never indexed, never framed.
+[[headers]]
+  for = "/admin-dashboard.html"
+  [headers.values]
+    Cache-Control = "no-store"
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "no-referrer"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+# The old preview page of example emails isn't part of the live site.
+[[redirects]]
+  from = "/emails.html"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin-dashboard.html"
+  status = 301
