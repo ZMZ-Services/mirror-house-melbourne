@@ -21,7 +21,8 @@ export async function sendEmail({ to, subject, html, text, replyTo }) {
     const res = await fetch((process.env.RESEND_API_BASE || 'https://api.resend.com') + '/emails', {
       method: 'POST',
       headers: { authorization: 'Bearer ' + process.env.RESEND_API_KEY, 'content-type': 'application/json' },
-      body: JSON.stringify({ from, to: [to], subject, html, text, reply_to: replyTo || undefined })
+      body: JSON.stringify({ from, to: [to], subject, html, text, reply_to: replyTo || undefined }),
+      signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');

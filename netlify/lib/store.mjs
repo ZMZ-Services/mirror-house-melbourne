@@ -45,12 +45,13 @@ export async function getSetting(key, db = { query }) {
   const r = await db.query('SELECT value FROM settings WHERE key = $1', [key]);
   return r.rows[0] ? r.rows[0].value : null;
 }
-export async function getDiscount(code, db = { query }) {
-  const r = await db.query('SELECT * FROM discount_codes WHERE code = $1', [String(code || '').trim().toUpperCase()]);
+export async function getDiscount(code, db = { query }, { lock = false } = {}) {
+  const r = await db.query('SELECT * FROM discount_codes WHERE code = $1' + (lock ? ' FOR UPDATE' : ''), [String(code || '').trim().toUpperCase()]);
   return r.rows[0] ? adminDiscount(r.rows[0]) : null;
 }
-// Paid orders only: a quote that was never paid or a failed payment doesn't use up a first-order code.
-const COUNTED = "payment IN ('paid', 'partially_refunded', 'refunded')";
+// Paid orders, and card payments still being confirmed (so two checkouts at once can't both use a first-order
+// code). A quote that was never paid or a failed payment doesn't use one up.
+const COUNTED = "payment IN ('pending', 'paid', 'partially_refunded', 'refunded')";
 export async function isFirstOrder(email, db = { query }) {
   const r = await db.query('SELECT 1 FROM orders WHERE email = $1 AND ' + COUNTED + ' LIMIT 1', [String(email).toLowerCase()]);
   return r.rowCount === 0;

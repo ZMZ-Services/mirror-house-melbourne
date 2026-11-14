@@ -35,13 +35,19 @@ async function call(method, path, body) {
     res = await fetch(apiBase() + path, {
       method,
       headers: { authorization: 'Bearer ' + process.env.SQUARE_ACCESS_TOKEN, 'square-version': VERSION, 'content-type': 'application/json' },
-      body: body ? JSON.stringify(body) : undefined
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(Number(process.env.SQUARE_TIMEOUT_MS) || 8000)
     });
   } catch (err) {
     return { ok: false, status: 0, errors: [{ code: 'NETWORK', detail: err.message }] };
   }
   const data = await res.json().catch(() => ({}));
   return { ok: res.ok, status: res.status, data, errors: data.errors || [] };
+}
+// No answer, or a Square server error: the payment may or may not have gone through.
+function unsure(r) {
+  // A reused key with different details means an earlier attempt may have reached Square: check, don't decline.
+  return r.status === 0 || r.status >= 500 || (r.errors || []).some((e) => e.code === 'IDEMPOTENCY_KEY_REUSED');
 }
 
 // Plain-English message for a declined or failed card payment.
@@ -64,8 +70,15 @@ export function cardErrorMessage(errors) {
   return map[code] || 'Your payment didn\'t go through, and you haven\'t been charged. Please check your card details and try again.';
 }
 
-// Charges a card token from the Web Payments SDK.
-export async function createPayment({ sourceId, idempotencyKey, amount, orderId, email, note }) {
+// Charges a card token from the Web Payments SDK. If Square doesn't answer clearly, it asks once more with the
+// same idempotency key (Square then returns the first result rather than charging twice). If it's still unclear,
+// the result is { ok: false, uncertain: true } and the order must be left for checking, not treated as declined.
+export async function createPayment(args) {
+  let r = await chargeOnce(args);
+  if (!r.ok && r.uncertain) r = await chargeOnce(args);
+  return r;
+}
+async function chargeOnce({ sourceId, idempotencyKey, amount, orderId, email, note }) {
   const r = await call('POST', '/v2/payments', {
     source_id: sourceId,
     idempotency_key: idempotencyKey,
@@ -76,6 +89,7 @@ export async function createPayment({ sourceId, idempotencyKey, amount, orderId,
     note: note ? String(note).slice(0, 500) : undefined,
     autocomplete: true
   });
+  if (!r.ok && unsure(r)) return { ok: false, uncertain: true, errors: r.errors };
   if (!r.ok || !r.data.payment || !['COMPLETED', 'APPROVED'].includes(r.data.payment.status)) {
     return { ok: false, message: cardErrorMessage(r.errors), errors: r.errors };
   }
@@ -111,7 +125,14 @@ export async function createPaymentLink({ orderId, amount, email, idempotencyKey
     const detail = r.errors[0] && r.errors[0].detail;
     return { ok: false, message: 'Square couldn\'t create the payment link' + (detail ? ': ' + detail : '.') };
   }
-  return { ok: true, url: r.data.payment_link.url, squareOrderId: r.data.payment_link.order_id };
+  return { ok: true, id: r.data.payment_link.id, url: r.data.payment_link.url, squareOrderId: r.data.payment_link.order_id };
+}
+
+// Switches off an old quote link, so a customer can't pay an out-of-date or cancelled quote.
+export async function deletePaymentLink(id) {
+  if (!id || !squareConfigured()) return { ok: true };
+  const r = await call('DELETE', '/v2/online-checkout/payment-links/' + encodeURIComponent(id));
+  return { ok: r.ok || r.status === 404 };
 }
 
 // Square signs each webhook: base64 HMAC-SHA256 of (notification URL + raw body) with the signature key.

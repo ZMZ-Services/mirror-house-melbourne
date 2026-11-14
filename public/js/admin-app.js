@@ -94,7 +94,11 @@
       '<a class="btn" href="#/settings">Manage</a></div>';
   }
   function csv(name, headers, rows) {
-    var q = function (v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var q = function (v) {
+      v = v == null ? '' : String(v);
+      if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; // a customer's text can't run as a spreadsheet formula
+      return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    };
     var text = [headers.map(q).join(',')].concat(rows.map(function (r) { return r.map(q).join(','); })).join('\n');
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
@@ -242,7 +246,12 @@
     id.on('logout', function () { showLock(lockMsg); lockMsg = ''; });
     id.on('error', function (err) { $('#lock-msg').textContent = (err && err.message) || 'Sign-in didn\'t work. Please try again.'; });
     ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function () { lastActive = Date.now(); }, { passive: true }); });
-    setInterval(function () { if (started && Date.now() - lastActive > IDLE) { lock(); toast('Signed out after 30 minutes without activity'); } }, 30000);
+    setInterval(function () {
+      if (started && Date.now() - lastActive > IDLE) {
+        started = false; // finish any saves first, then sign out
+        D.saved().then(function () { lock(); toast('Signed out after 30 minutes without activity'); });
+      }
+    }, 30000);
     if (id.currentUser()) start(id.currentUser());
   }
   // Shows "Saving…" / "All changes saved" in the top bar.

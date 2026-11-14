@@ -62,6 +62,7 @@ Set these in Netlify (Site configuration → Environment variables). Never put v
 | `SQUARE_LOCATION_ID` | Card payments | Square Developer Dashboard → Locations |
 | `SQUARE_ENVIRONMENT` | Card payments | `production` for real payments, `sandbox` for testing |
 | `SQUARE_WEBHOOK_SIGNATURE_KEY` | Quote payment links | Square Developer Dashboard → Webhooks, subscription to `payment.created` and `payment.updated` at `https://<site>/api/square/webhook` |
+| `SQUARE_WEBHOOK_URL` | Quote payment links (optional) | The exact URL the Square webhook subscription uses. Set it if that differs from `SITE_URL` + `/api/square/webhook` (e.g. after moving to a custom domain without updating Square) |
 | `RESEND_API_KEY` | Emails | From resend.com. Emails are off until it's set; orders still work. Secret. |
 | `EMAIL_FROM` | Emails | e.g. `Mirror House Melbourne <orders@mirrorhousemelbourne.com.au>` (domain verified in Resend) |
 | `ADMIN_EMAIL` | New-order alerts | Defaults to the store email in Admin → Settings |

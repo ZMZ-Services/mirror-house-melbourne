@@ -144,7 +144,9 @@ test('fulfilment, timeline notes and the customer update email', async () => {
   assert.equal(env.resend.sent.length, 1);
   assert.equal(env.resend.sent[0].subject, 'Your mirror is on its way');
   const bad = await sync({ orders: [{ id, set: { fulfilment: 'teleported' } }] });
-  assert.equal(bad.status, 400);
+  assert.equal(bad.data.ok, false);
+  assert.equal(bad.data.failed[0].id, id);
+  assert.match(bad.data.failed[0].error, /isn't valid/);
 });
 
 test('refunds go through Square for the amount entered', async () => {
@@ -165,7 +167,9 @@ test('refunds go through Square for the amount entered', async () => {
   o = rest.data.state.orders[0];
   assert.equal(o.payment, 'refunded');
   const tooMuch = await sync({ orders: [{ id, set: { payment: 'refunded', refunded: o.total + 1 } }] });
-  assert.equal(tooMuch.status, 400);
+  assert.equal(tooMuch.data.ok, false);
+  assert.match(tooMuch.data.failed[0].error, /already been fully refunded/);
+  assert.equal(env.square.calls.filter((c) => c.url === '/v2/refunds').length, 2); // no third refund
 });
 
 test('quote flow: send quote with a Square link, then Square\'s webhook confirms payment and takes stock', async () => {
@@ -204,6 +208,26 @@ test('quote flow: send quote with a Square link, then Square\'s webhook confirms
   assert.equal((await db.query("SELECT stock FROM products WHERE slug = 'soho-slim-frame-mirror-black'")).rows[0].stock, before - 1);
 });
 
+test('re-sending or cancelling a quote switches off the old Square link; unmatched payments are flagged', async () => {
+  const id = (await call(fn.orders, req('POST', '/api/orders', { body: checkout({ source_id: undefined, address: { line1: '1 Main Rd', suburb: 'Ballarat', state: 'VIC', postcode: '3350' } }) }))).data.order_id;
+  await sync({ orders: [{ id, set: { payment: 'quote_sent', delivery: 10000 } }] });
+  const firstLink = (await db.query('SELECT payment_link_id, square_order_id FROM orders WHERE id = $1', [id])).rows[0];
+  assert.ok(firstLink.payment_link_id);
+  await sync({ orders: [{ id, set: { payment: 'quote_sent', delivery: 12000 } }] });
+  const deletes = env.square.calls.filter((c) => c.method === 'DELETE');
+  assert.equal(deletes.length, 1);
+  assert.equal(deletes[0].url, '/v2/online-checkout/payment-links/' + firstLink.payment_link_id);
+  await sync({ orders: [{ id, set: { payment: 'voided', fulfilment: 'cancelled' } }] });
+  assert.equal(env.square.calls.filter((c) => c.method === 'DELETE').length, 2);
+  // Paying the first (old) link: not applied to the order, but flagged in the activity log.
+  const payload = JSON.stringify({ data: { object: { payment: { id: 'pay_old', status: 'COMPLETED', order_id: firstLink.square_order_id, amount_money: { amount: 35000 } } } } });
+  const sig = createHmac('sha256', 'test-signature-key').update('https://shop.example.com/api/square/webhook' + payload).digest('base64');
+  const res = await fn['square-webhook'](req('POST', '/api/square/webhook', { body: payload, headers: { 'x-square-hmacsha256-signature': sig } }));
+  assert.equal(res.status, 200);
+  assert.equal((await db.query('SELECT payment FROM orders WHERE id = $1', [id])).rows[0].payment, 'voided');
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM activity_log WHERE action = 'payment.unmatched'")).rows[0].n, 1);
+});
+
 test('quote marked paid by hand, or cancelled', async () => {
   const quote = () => call(fn.orders, req('POST', '/api/orders', { body: checkout({ source_id: undefined, address: { line1: '1 Main Rd', suburb: 'Ballarat', state: 'VIC', postcode: '3350' } }) })).then((r) => r.data.order_id);
   const a = await quote(), b = await quote();
@@ -215,7 +239,11 @@ test('quote marked paid by hand, or cancelled', async () => {
   assert.equal(byId[b].fulfilment, 'cancelled');
   // A refunded order can't be "un-refunded".
   const c = await sync({ orders: [{ id: b, set: { payment: 'paid' } }] });
-  assert.equal(c.status, 400);
+  assert.equal(c.data.ok, false);
+  // One bad order change doesn't stop the others in the same save.
+  const both = await sync({ orders: [{ id: b, set: { payment: 'paid' } }, { id: a, set: { tracking: 'Van 2' } }] });
+  assert.equal(both.data.failed.length, 1);
+  assert.equal(both.data.state.orders.find((o) => o.id === a).tracking, 'Van 2');
 });
 
 test('photo uploads: images only, and they are served back from /media/', async () => {

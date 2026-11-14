@@ -89,19 +89,31 @@ export async function sendOrderEmails(orderId) {
 }
 
 // The whole checkout. Returns { status, body } for the HTTP response.
-export async function placeOrder(body, { now = new Date(), waitForEmails = true } = {}) {
+// defer(promise): work that can finish after the reply is sent (emails). On Netlify it's context.waitUntil;
+// by default (tests) it is awaited before returning.
+export async function placeOrder(body, { now = new Date(), defer: deferFn } = {}) {
+  const later = [];
+  const defer = deferFn || ((p) => later.push(p));
+  const out = await placeOrderInner(body, now, defer);
+  await Promise.all(later);
+  return out;
+}
+async function placeOrderInner(body, now, defer) {
   let d;
   try { d = validateCheckout(body || {}, now); } catch (err) {
     if (err.status === 400) return { status: 400, body: { error: err.message, field: err.field } };
     throw err;
   }
 
-  // A repeated request (double click, retry) gets the first result instead of a second order.
+  // A repeated request (double click, or the checkout retrying after a dropped connection) gets the first result
+  // instead of a second order. If the first attempt stopped before Square answered, the payment is asked for again
+  // with the same key, which Square treats as the same payment, never a second one.
   const prior = (await query('SELECT * FROM orders WHERE idempotency_key = $1', [d.idempotencyKey])).rows[0];
   if (prior) {
     if (prior.payment === 'paid' || prior.payment === 'awaiting_quote') return { status: 200, body: { order_id: prior.id, total_cents: prior.total, quote: prior.payment === 'awaiting_quote' } };
-    if (prior.payment === 'pending') return { status: 409, body: { error: 'Your order is still being processed. Please wait a moment before trying again.' } };
-    return { status: 402, body: { error: 'That payment didn\'t go through. Please try again.' } };
+    if (prior.payment === 'pending' && prior.stock_taken && d.sourceId && Date.now() - new Date(prior.updated_at).getTime() > 15000) return chargeOrder(prior, d, defer);
+    if (prior.payment === 'pending') return { status: 409, body: { error: 'Your payment is still being confirmed. Please don\'t pay again: wait a minute, or check your email for a confirmation.' } };
+    return { status: 402, body: { error: 'That payment didn\'t go through. Please try again.', field: 'co-pay', retry: true } };
   }
 
   // 1. Price it from the database and hold the stock, inside one transaction with the products locked.
@@ -114,7 +126,7 @@ export async function placeOrder(body, { now = new Date(), waitForEmails = true 
       const shipping = await getSetting('shipping', db);
       let discount = null;
       if (d.code) {
-        const rule = await getDiscount(d.code, db);
+        const rule = await getDiscount(d.code, db, { lock: true }); // one order at a time per code, for the limits
         if (!rule) throw bad('Sorry, that code isn\'t valid.', 'co-code');
         discount = { rule, isFirstOrder: rule.firstOrderOnly ? await isFirstOrder(d.email, db) : true, timesUsed: rule.limit != null ? await timesUsed(rule.code, db) : 0 };
       }
@@ -148,18 +160,28 @@ export async function placeOrder(body, { now = new Date(), waitForEmails = true 
     throw err;
   }
 
-  const who = { actorType: 'customer', actor: d.email };
   if (order.payment === 'awaiting_quote') {
-    await logActivity({ query }, { ...who, action: 'quote.requested', entity: 'order', entityId: order.id, summary: 'Quote request #' + order.id + ' from ' + d.name + ' (' + money(order.total) + ' plus delivery)' });
-    const mail = sendOrderEmails(order.id);
-    if (waitForEmails) await mail;
+    await logActivity({ query }, { actorType: 'customer', actor: d.email, action: 'quote.requested', entity: 'order', entityId: order.id, summary: 'Quote request #' + order.id + ' from ' + d.name + ' (' + money(order.total) + ' plus delivery)' });
+    defer(sendOrderEmails(order.id));
     return { status: 200, body: { order_id: order.id, total_cents: order.total, quote: true } };
   }
+  return chargeOrder(order, d, defer);
+}
 
-  // 2. Take the payment. The order id goes to Square as the reference, and the checkout's key stops double charges.
+// 2. Take the payment. The order id goes to Square as the reference, and the checkout's key stops double charges.
+async function chargeOrder(order, d, defer) {
+  const who = { actorType: 'customer', actor: d.email };
   let pay = { ok: true, id: null, receiptUrl: '', card: 'Nothing to pay (fully discounted)' };
   if (order.total > 0) {
     pay = await createPayment({ sourceId: d.sourceId, idempotencyKey: d.idempotencyKey, amount: order.total, orderId: order.id, email: d.email, note: 'Mirror House order #' + order.id });
+  }
+  if (!pay.ok && pay.uncertain) {
+    // Square didn't answer clearly. The card may have been charged, so keep the order and its mirrors held,
+    // show it in the admin as "Payment pending" to check against Square, and tell the customer not to pay again.
+    await query("UPDATE orders SET card = $2, events = events || $3::jsonb, updated_at = now() WHERE id = $1",
+      [order.id, 'Check in Square', JSON.stringify([event('Square didn\'t confirm this payment in time. Check Square for a payment on order #' + order.id + ' before doing anything else.')])]);
+    await logActivity({ query }, { ...who, action: 'payment.unconfirmed', entity: 'order', entityId: order.id, summary: 'Square didn\'t confirm the payment for #' + order.id + '. Check it in Square.' });
+    return { status: 202, body: { error: 'We couldn\'t confirm your payment with Square just now. Please don\'t pay again: we\'ll check and email you within one business day.', pending: true, order_id: order.id } };
   }
   if (!pay.ok) {
     await tx(async (db) => {
@@ -168,18 +190,17 @@ export async function placeOrder(body, { now = new Date(), waitForEmails = true 
         [order.id, 'Card payment declined', JSON.stringify([event('Card payment didn\'t go through: ' + pay.message + ' Mirrors released back into stock.')])]);
       await logActivity(db, { ...who, action: 'payment.failed', entity: 'order', entityId: order.id, summary: 'Card payment for #' + order.id + ' didn\'t go through', detail: { errors: (pay.errors || []).map((e) => e.code) } });
     });
-    return { status: 402, body: { error: pay.message, field: 'co-pay' } };
+    return { status: 402, body: { error: pay.message, field: 'co-pay', retry: true } };
   }
 
   await tx(async (db) => {
     await db.query("UPDATE orders SET payment = 'paid', card = $2, square_payment_id = $3, square_receipt_url = $4, events = events || $5::jsonb, updated_at = now() WHERE id = $1",
       [order.id, pay.card, pay.id, pay.receiptUrl, JSON.stringify([event('Payment of ' + money(order.total) + ' received by Square (' + pay.card + ').')])]);
-    await logActivity(db, { ...who, action: 'order.paid', entity: 'order', entityId: order.id, summary: 'Order #' + order.id + ' paid: ' + money(order.total) + ' from ' + d.name });
+    await logActivity(db, { ...who, action: 'order.paid', entity: 'order', entityId: order.id, summary: 'Order #' + order.id + ' paid: ' + money(order.total) + ' from ' + order.name });
     for (const slug of order.soldOut || []) {
       await logActivity(db, { actorType: 'system', action: 'product.sold_out', entity: 'product', entityId: slug, summary: slug + ' sold out with order #' + order.id });
     }
   });
-  const mail = sendOrderEmails(order.id);
-  if (waitForEmails) await mail;
+  defer(sendOrderEmails(order.id));
   return { status: 200, body: { order_id: order.id, total_cents: order.total, quote: false } };
 }

@@ -37,6 +37,8 @@ export async function mockSquare() {
     calls.push({ method, url, headers, body });
     if (headers.authorization !== 'Bearer test-square-token') return { status: 401, body: { errors: [{ code: 'UNAUTHORIZED' }] } };
     if (url === '/v2/payments') {
+      if (body.source_id === 'cnon:square-down') return { status: 503, body: { errors: [{ code: 'SERVICE_UNAVAILABLE' }] } };
+      if (body.source_id === 'cnon:slow-then-ok' && !seen.has(body.idempotency_key) && !calls.some((c) => c !== calls[calls.length - 1] && c.body && c.body.idempotency_key === body.idempotency_key)) return { status: 504, body: { errors: [{ code: 'GATEWAY_TIMEOUT' }] } };
       if (seen.has(body.idempotency_key)) return { body: seen.get(body.idempotency_key) };
       if (body.source_id === 'cnon:card-nonce-declined') return { status: 402, body: { errors: [{ code: 'CARD_DECLINED', category: 'PAYMENT_METHOD_ERROR' }] } };
       const out = { payment: { id: 'pay_' + calls.length, status: 'COMPLETED', amount_money: body.amount_money, receipt_url: 'https://squareup.com/receipt/preview/test', card_details: { card: { card_brand: 'VISA', last_4: '1111' } } } };
@@ -44,7 +46,8 @@ export async function mockSquare() {
       return { body: out };
     }
     if (url === '/v2/refunds') return { body: { refund: { id: 'ref_' + calls.length, status: 'COMPLETED', amount_money: body.amount_money } } };
-    if (url === '/v2/online-checkout/payment-links') return { body: { payment_link: { id: 'pl_1', url: 'https://square.link/u/test' + calls.length, order_id: 'sqord_' + calls.length } } };
+    if (url === '/v2/online-checkout/payment-links') return { body: { payment_link: { id: 'pl_' + calls.length, url: 'https://square.link/u/test' + calls.length, order_id: 'sqord_' + calls.length } } };
+    if (method === 'DELETE' && url.startsWith('/v2/online-checkout/payment-links/')) return { body: { id: url.split('/').pop() } };
     return { status: 404, body: { errors: [{ code: 'NOT_FOUND' }] } };
   });
   return Object.assign(m, { calls });

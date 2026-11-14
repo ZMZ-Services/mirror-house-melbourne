@@ -5,6 +5,7 @@ import { query } from '../lib/db.mjs';
 import { verifyWebhook } from '../lib/square.mjs';
 import { siteUrl } from '../lib/http.mjs';
 import { markPaid } from '../lib/admin.mjs';
+import { logActivity } from '../lib/store.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return new Response(null, { status: 405 });
@@ -16,7 +17,16 @@ export default async (req) => {
   const pay = body && body.data && body.data.object && body.data.object.payment;
   if (!pay || pay.status !== 'COMPLETED' || !pay.order_id) return new Response(null, { status: 200 });
   const row = (await query("SELECT id, total FROM orders WHERE square_order_id = $1 AND payment IN ('quote_sent', 'awaiting_quote')", [pay.order_id])).rows[0];
-  if (!row) return new Response(null, { status: 200 });
+  if (!row) {
+    // Checkout card payments are already recorded. Anything else (e.g. an old quote link) is flagged for checking.
+    const known = await query('SELECT 1 FROM orders WHERE square_payment_id = $1 OR square_order_id = $2', [pay.id, pay.order_id]);
+    const seen = await query("SELECT 1 FROM activity_log WHERE action = 'payment.unmatched' AND entity_id = $1", [String(pay.id)]);
+    if (!known.rowCount && !seen.rowCount) {
+      await logActivity({ query }, { actorType: 'system', action: 'payment.unmatched', entity: 'payment', entityId: pay.id,
+        summary: 'Square received a payment of $' + (((pay.amount_money && pay.amount_money.amount) || 0) / 100).toFixed(2) + ' that doesn\'t match an open order. Check it in Square.', detail: { order_id: pay.order_id, note: pay.note || '' } });
+    }
+    return new Response(null, { status: 200 });
+  }
   const paid = pay.amount_money && pay.amount_money.amount;
   if (paid !== row.total) {
     await query("UPDATE orders SET events = events || $2::jsonb WHERE id = $1", [row.id, JSON.stringify([{ at: Date.now(), text: 'Square reported a payment of ' + (paid / 100).toFixed(2) + ' for this quote, which doesn\'t match the total. Please check it in Square before confirming.' }])]);

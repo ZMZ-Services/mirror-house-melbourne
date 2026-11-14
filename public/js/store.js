@@ -508,10 +508,9 @@
       .then(function (data) {
         if (!data || !Array.isArray(data.products) || !data.products.length) return fallback;
         var list = data.products.map(function (p) { useServerPhotos(p); return Object.assign({}, META[p.slug] || { desc: '', specs: [] }, p); });
-        // Products listed in CATALOGUE but not yet in the database (e.g. new mirrors) are still shown.
-        // Add them to the database too, or orders for them will be refused by the server.
-        var extras = CATALOGUE.filter(function (p) { return !bySlug(list, p.slug); }).map(function (p) { return Object.assign({ in_stock: 1 }, p); });
-        return extras.concat(list);
+        // Live site: the database decides what's on sale, so a mirror set to Draft or deleted in the admin
+        // disappears from the shop (the built-in list is only used if the database can't be reached at all).
+        return list;
       })
       .catch(function () {
         if (!PREVIEW) return fallback;
@@ -1110,6 +1109,10 @@
     // Apple Pay and Google Pay need the shop's domain registered with Square first, so the express buttons stay
     // hidden on the live site until that's done.
     var card = null;
+    // One payment key per checkout attempt. If the reply is lost (slow network, timeout), paying again sends the same
+    // key, so the server and Square treat it as the same payment, never a second charge. A clear "no" (declined card,
+    // changed price, sold out) starts a fresh attempt.
+    var payKey = null, payToken = null;
     function loadSquare() {
       if (window.Square) return Promise.resolve();
       return new Promise(function (resolve, reject) {
@@ -1200,19 +1203,28 @@
       var submit = $('#co-submit');
       submit.disabled = true;
       msg.textContent = t.quote ? 'Sending your request…' : 'Processing your payment…';
-      var tokenP = t.quote ? Promise.resolve(null) : card ? card.tokenize().then(function (r) { if (r.status !== 'OK') throw new Error('Please check your card details.'); return r.token; }) : Promise.reject(new Error('Card payments aren\'t available yet.'));
+      // A retry after a lost reply re-sends the same card token with the same key (see payKey above).
+      var tokenP = t.quote ? Promise.resolve(null) : payKey && payToken ? Promise.resolve(payToken) : card ? card.tokenize().then(function (r) { if (r.status !== 'OK') throw new Error('Please check your card details.'); payToken = r.token; return r.token; }) : Promise.reject(new Error('Card payments aren\'t available yet.'));
       tokenP.then(function (token) {
         if (token) data.source_id = token;
-        data.idempotency_key = rid();
+        payKey = payKey || rid();
+        data.idempotency_key = payKey;
         data.session_id = VISIT.sid;
         data.expected_total = t.total; // the server refuses the payment if its total differs from what was shown
         return fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) })
-          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); });
+          .then(function (r) {
+            return r.json().catch(function () { return null; }).then(function (d) {
+              if (!d || r.status >= 500) { var e = new Error('We couldn\'t hear back from our server. Please try again: you won\'t be charged twice.'); e.unsure = true; throw e; }
+              return { ok: r.ok && r.status !== 202, status: r.status, d: d };
+            });
+          }, function () { var e = new Error('Your connection dropped. Please try again: you won\'t be charged twice.'); e.unsure = true; throw e; });
       }).then(function (res) {
-        if (!res.ok) { var e = new Error(res.d.error || 'We couldn\'t place the order.'); e.field = res.d.field; throw e; }
+        if (res.status === 202) { var p = new Error(res.d.error); p.pending = true; throw p; }
+        if (!res.ok) { var e = new Error(res.d.error || 'We couldn\'t place the order.'); e.field = res.d.field; if (res.status !== 409 || res.d.field) { payKey = null; payToken = null; } throw e; }
         t.total = res.d.total_cents != null ? res.d.total_cents : t.total;
         confirmation('#' + res.d.order_id, t, data);
       }).catch(function (err) {
+        if (err.pending) { msg.textContent = err.message; msg.className = 'form-msg error'; return; } // keep Pay switched off
         submit.disabled = false;
         msg.textContent = err.message || 'We couldn\'t place the order. Please try again.';
         msg.className = 'form-msg error';

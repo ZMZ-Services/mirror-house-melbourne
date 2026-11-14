@@ -4,7 +4,7 @@
 import { query, tx } from './db.mjs';
 import { adminProduct, adminOrder, adminDiscount, getSetting, logActivity, event, takeStock, returnStock } from './store.mjs';
 import { trafficSummary } from './traffic.mjs';
-import { squareConfigured, squareEnv, refundPayment, createPaymentLink } from './square.mjs';
+import { squareConfigured, squareEnv, refundPayment, createPaymentLink, deletePaymentLink } from './square.mjs';
 import { emailConfigured, sendEmail, deliveryQuote, fulfilmentUpdate, orderConfirmation } from './email.mjs';
 import { money } from './pricing.mjs';
 import { siteUrl } from './http.mjs';
@@ -125,7 +125,11 @@ function diffKeys(a, b) {
 // ---------- sync ----------
 // changes: { products: { upsert: [{ slug, isNew, fields, stockDelta }], delete: [slug] }, discounts: { upsert: [...], delete: [code] },
 //            settings, shipping, customerNotes: { email: note }, subscribers: { delete: [email] }, orders: [{ id, set, addEvents, notify, quoteMessage, refundReason }] }
-export async function applySync(changes, user) {
+// defer(promise): work that can finish after the reply (emails). Order changes are applied one by one, and each
+// one's result is reported, so one failure (e.g. a refund Square refuses) doesn't hide the others.
+export async function applySync(changes, user, { defer } = {}) {
+  const later = [];
+  const run = defer || ((p) => later.push(p));
   const who = { actorType: 'admin', actor: user.email };
   const notes = [];
 
@@ -206,7 +210,7 @@ export async function applySync(changes, user) {
     }
     if (changes.shipping) {
       const prev = (await getSetting('shipping', db)) || {};
-      const next = cleanShipping(changes.shipping);
+      const next = cleanShipping(Object.assign({}, prev, changes.shipping)); // only the parts that changed are sent
       const keys = diffKeys(prev, next);
       if (keys.length) {
         await db.query("INSERT INTO settings (key, value) VALUES ('shipping', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()", [JSON.stringify(next)]);
@@ -228,11 +232,18 @@ export async function applySync(changes, user) {
   });
 
   // Orders: one at a time, because some changes talk to Square or send an email.
+  const failed = [];
   for (const oc of (changes.orders || []).slice(0, 50)) {
-    const msg = await applyOrderChange(oc, user);
-    if (msg) notes.push(msg);
+    try {
+      const msg = await applyOrderChange(oc, user, run);
+      if (msg) notes.push(msg);
+    } catch (err) {
+      if (!err.status || err.status >= 500 && err.status !== 502) console.error('order change failed', err);
+      failed.push({ id: oc.id, error: err.status && err.status !== 500 ? err.message : 'Something went wrong saving this order.' });
+    }
   }
-  return { notes };
+  if (!defer) await Promise.all(later);
+  return { notes, failed };
 }
 
 const PAYMENT = ['pending', 'paid', 'awaiting_quote', 'quote_sent', 'voided', 'refunded', 'partially_refunded'];
@@ -248,6 +259,11 @@ function orderForEmail(row, store, shipping) {
   const z = ((shipping && shipping.zones) || []).find((x) => x.id === o.zone);
   return Object.assign({}, o, { name: o.customer.name, email: o.customer.email, phone: o.customer.phone, zoneName: z ? z.name : '', gstRegistered: !!(store && store.gstRegistered),
     dateText: new Date(o.createdAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Melbourne' }) });
+}
+
+async function addEventLater(id, textValue) {
+  try { await query("UPDATE orders SET events = events || $2::jsonb WHERE id = $1", [id, JSON.stringify([event(textValue)])]); }
+  catch (err) { console.error('order event not saved', err.message); }
 }
 
 // Marks a quote (or any unpaid order) as paid: takes the mirrors out of stock and confirms the order.
@@ -275,7 +291,7 @@ export async function markPaid(orderId, { actorType, actor, card, paymentId, rec
   return true;
 }
 
-async function applyOrderChange(oc, user) {
+async function applyOrderChange(oc, user, run) {
   const id = Number(oc.id);
   if (!Number.isInteger(id)) throw bad('An order number isn\'t valid.');
   const set = oc.set || {};
@@ -290,20 +306,24 @@ async function applyOrderChange(oc, user) {
     const delivery = cents(set.delivery, { nullable: false });
     const total = row.subtotal - row.discount + delivery;
     let link = null, linkNote = '';
+    if (row.payment_link_id) await deletePaymentLink(row.payment_link_id); // the old quote's link stops working
     if (squareConfigured()) {
       const r = await createPaymentLink({ orderId: id, amount: total, email: row.email, idempotencyKey: 'quote-' + id + '-' + total + '-' + Date.now(), redirectUrl: siteUrl() + '/' });
       if (r.ok) link = r; else linkNote = r.message;
     } else linkNote = 'Square isn\'t connected yet, so no payment link was made.';
-    await query("UPDATE orders SET delivery = $2, total = $3, payment = 'quote_sent', card = $4, payment_link_url = COALESCE($5, payment_link_url), square_order_id = COALESCE($6, square_order_id), updated_at = now() WHERE id = $1",
-      [id, delivery, total, link ? 'Square payment link sent' : 'Quote sent', link && link.url, link && link.squareOrderId]);
+    await query("UPDATE orders SET delivery = $2, total = $3, payment = 'quote_sent', card = $4, payment_link_url = $5, square_order_id = $6, payment_link_id = $7, updated_at = now() WHERE id = $1",
+      [id, delivery, total, link ? 'Square payment link sent' : 'Quote sent', link ? link.url : null, link ? link.squareOrderId : null, link ? link.id : null]);
     row = await loadOrder(id);
     const [store, shipping] = await Promise.all([getSetting('store'), getSetting('shipping')]);
     const o = orderForEmail(row, store, shipping);
-    const sent = link || row.payment_link_url ? await sendEmail({ to: row.email, replyTo: store && store.email, ...deliveryQuote(o, store, text(oc.quoteMessage, 1000)) }) : { ok: false, reason: 'no payment link' };
-    if (linkNote) added.push(event('Payment link not made: ' + linkNote));
-    added.push(event(sent.ok ? 'Quote email with the Square payment link sent to ' + row.email : 'Quote email not sent: ' + sent.reason));
+    if (linkNote) {
+      added.push(event('Payment link not made: ' + linkNote + ' The quote email wasn\'t sent.'));
+      note = 'Quote saved, but no Square payment link was made, so the email wasn\'t sent.';
+    } else {
+      const mail = deliveryQuote(o, store, text(oc.quoteMessage, 1000));
+      run(sendEmail({ to: row.email, replyTo: store && store.email, ...mail }).then((sent) => addEventLater(id, sent.ok ? 'Quote email with the Square payment link sent to ' + row.email : 'Quote email not sent: ' + sent.reason)));
+    }
     log.push('Sent a delivery quote of ' + money(delivery) + ' (total ' + money(total) + ')');
-    if (!sent.ok) note = 'Quote saved, but the email wasn\'t sent (' + sent.reason + ').';
   } else if (set.payment === 'paid' && ['awaiting_quote', 'quote_sent', 'pending'].includes(row.payment)) {
     await markPaid(id, { ...who, card: text(set.card, 100) || 'Paid another way', text: 'Marked as paid by ' + user.email + '.' });
     row = await loadOrder(id);
@@ -312,6 +332,7 @@ async function applyOrderChange(oc, user) {
       if (row.stock_taken) await returnStock(db, row);
       await db.query("UPDATE orders SET payment = 'voided', fulfilment = 'cancelled', updated_at = now() WHERE id = $1", [id]);
     });
+    if (row.payment_link_id) await deletePaymentLink(row.payment_link_id); // a cancelled quote can't be paid
     log.push('Cancelled the request');
     row = await loadOrder(id);
   } else if ((set.payment === 'refunded' || set.payment === 'partially_refunded') && ['paid', 'partially_refunded'].includes(row.payment)) {
@@ -355,10 +376,7 @@ async function applyOrderChange(oc, user) {
     row = await loadOrder(id);
     const [store, shipping] = await Promise.all([getSetting('store'), getSetting('shipping')]);
     const mail = fulfilmentUpdate(orderForEmail(row, store, shipping), store, oc.notify);
-    if (mail) {
-      const sent = await sendEmail({ to: row.email, replyTo: store && store.email, ...mail });
-      added.push(event(sent.ok ? 'Update email sent to ' + row.email : 'Update email not sent: ' + sent.reason));
-    }
+    if (mail) run(sendEmail({ to: row.email, replyTo: store && store.email, ...mail }).then((sent) => addEventLater(id, sent.ok ? 'Update email sent to ' + row.email : 'Update email not sent: ' + sent.reason)));
   }
   if (added.length) await query("UPDATE orders SET events = events || $2::jsonb, updated_at = now() WHERE id = $1", [id, JSON.stringify(added)]);
   const comments = added.filter((e) => !/^(Update email|Quote email|Payment link|Square refund|Refund of|Order confirmation)/.test(e.text));

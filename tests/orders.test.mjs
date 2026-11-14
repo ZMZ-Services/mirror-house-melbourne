@@ -151,6 +151,48 @@ test('if the total shown differs from the server\'s total, nothing is charged', 
   assert.equal(ok.status, 200);
 });
 
+test('Square down: the order is held as "payment pending", not declined, and the stock stays held', async () => {
+  const before = await stock('soho-slim-frame-mirror-black');
+  const r = await call(orders, req('POST', '/api/orders', { body: checkout({ source_id: 'cnon:square-down' }) }));
+  assert.equal(r.status, 202);
+  assert.match(r.data.error, /don't pay again/);
+  assert.equal(env.square.calls.filter((c) => c.url === '/v2/payments').length, 2); // asked twice, same key
+  const keys = new Set(env.square.calls.map((c) => c.body.idempotency_key));
+  assert.equal(keys.size, 1);
+  const o = await order(r.data.order_id);
+  assert.equal(o.payment, 'pending');
+  assert.equal(await stock('soho-slim-frame-mirror-black'), before - 1);
+  assert.ok((await db.query("SELECT 1 FROM activity_log WHERE action = 'payment.unconfirmed'")).rowCount === 1);
+});
+
+test('a slow first answer from Square is retried with the same key and charged once', async () => {
+  const r = await call(orders, req('POST', '/api/orders', { body: checkout({ source_id: 'cnon:slow-then-ok' }) }));
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  const pays = env.square.calls.filter((c) => c.url === '/v2/payments');
+  assert.equal(pays.length, 2);
+  assert.equal(pays[0].body.idempotency_key, pays[1].body.idempotency_key);
+  assert.equal((await order(r.data.order_id)).payment, 'paid');
+});
+
+test('a retry after a lost reply finishes the first order instead of making a second', async () => {
+  const body = checkout();
+  // The first attempt reserved the stock but stopped before Square answered (e.g. a timeout).
+  const first = await call(orders, req('POST', '/api/orders', { body: { ...body, source_id: 'cnon:square-down' } }));
+  assert.equal(first.status, 202);
+  await db.query("UPDATE orders SET updated_at = now() - interval '1 minute' WHERE id = $1", [first.data.order_id]);
+  const retry = await call(orders, req('POST', '/api/orders', { body }));
+  assert.equal(retry.status, 200, JSON.stringify(retry.data));
+  assert.equal(retry.data.order_id, first.data.order_id);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM orders')).rows[0].n, 1);
+  assert.equal((await order(first.data.order_id)).payment, 'paid');
+});
+
+test('two checkouts at once can\'t both use WELCOME10 for the same first order', async () => {
+  const email = 'twice@example.com';
+  const [a, b] = await Promise.all([1, 2].map(() => call(orders, req('POST', '/api/orders', { body: checkout({ email, discount_code: 'WELCOME10' }) }))));
+  assert.deepEqual([a.status, b.status].sort(), [200, 400]);
+});
+
 test('checkout details are checked on the server', async () => {
   const cases = [
     [{ email: 'not-an-email' }, 'co-email'],

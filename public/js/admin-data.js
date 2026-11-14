@@ -335,14 +335,38 @@
     old.discounts.forEach(function (d) { if (!curD[d.code]) dDel.push(d.code); });
     if (dUp.length || dDel.length) { out.discounts = { upsert: dUp, delete: dDel }; any = true; }
 
-    if (!same(cur.settings, old.settings)) { out.settings = cur.settings; any = true; }
-    if (!same(cur.shipping, old.shipping)) { out.shipping = cur.shipping; any = true; }
+    // Only the settings that changed are sent, so two people editing different settings don't undo each other.
+    ['settings', 'shipping'].forEach(function (key) {
+      var c = cur[key] || {}, o = old[key] || {}, part = {};
+      Object.keys(c).forEach(function (k) { if (!same(c[k], o[k])) part[k] = c[k]; });
+      if (Object.keys(part).length) { out[key] = part; any = true; }
+    });
     var notes = {};
     Object.keys(cur.customerNotes || {}).forEach(function (k) { if ((cur.customerNotes[k] || '') !== ((old.customerNotes || {})[k] || '')) notes[k] = cur.customerNotes[k]; });
     if (Object.keys(notes).length) { out.customerNotes = notes; any = true; }
     var curS = byKey(cur.subscribers, 'email'), gone = (old.subscribers || []).filter(function (x) { return !curS[x.email]; }).map(function (x) { return x.email; });
     if (gone.length) { out.subscribers = { delete: gone }; any = true; }
     return any ? out : null;
+  }
+  // After a save, start from what the server now holds and keep only the edits made while the save was on its way
+  // (a field counts as edited if it differs from what was sent). Everything else, like stock just sold, comes
+  // from the server, so it can't be sent back stale.
+  function rebase(local, sent, server) {
+    var out = clone(server);
+    [['products', 'slug'], ['orders', 'id'], ['discounts', 'code'], ['subscribers', 'email']].forEach(function (pair) {
+      var key = pair[0], id = pair[1], L = byKey(local[key], id), S = byKey(sent[key], id), O = byKey(out[key], id);
+      (out[key] || []).forEach(function (x) {
+        var l = L[x[id]], before = S[x[id]];
+        if (!l || !before) return;
+        Object.keys(l).forEach(function (k) { if (!same(l[k], before[k])) x[k] = clone(l[k]); });
+      });
+      (local[key] || []).forEach(function (l) { if (!S[l[id]] && !O[l[id]]) out[key].unshift(clone(l)); }); // added meanwhile
+      out[key] = (out[key] || []).filter(function (x) { return !S[x[id]] || L[x[id]]; }); // removed meanwhile
+    });
+    ['settings', 'shipping', 'customerNotes'].forEach(function (key) {
+      Object.keys(local[key] || {}).forEach(function (k) { if (!same(local[key][k], (sent[key] || {})[k])) out[key][k] = clone(local[key][k]); });
+    });
+    return out;
   }
   function clearTransient(s) { (s.orders || []).forEach(function (o) { delete o._notify; delete o._quoteMessage; delete o._refundReason; }); }
 
@@ -375,13 +399,18 @@
       var ch = changes(state, synced);
       clearTransient(state);
       if (!ch) return;
-      var sentAs = null;
+      var sent = null;
       return uploadPhotos(ch).then(function () {
-        sentAs = JSON.stringify(state);
+        sent = clone(state);
         return api('/api/admin/sync', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(ch) });
       }).then(function (res) {
-        if (JSON.stringify(state) === sentAs) { setState(res.state); notify(); }
-        else synced = clone(res.state); // more edits were made meanwhile: they're saved next
+        if (same(state, sent)) setState(res.state);
+        else { var next = rebase(state, sent, res.state); setState(res.state); state = next; } // later edits are saved next
+        notify();
+        if (res.failed && res.failed.length) {
+          var f = res.failed[0];
+          throw new Error('Order #' + f.id + ': ' + f.error + (res.failed.length > 1 ? ' (and ' + (res.failed.length - 1) + ' more)' : ''));
+        }
         if (res.notes && res.notes.length && window.MHAdmin) window.MHAdmin.toast(res.notes[0]);
       });
     }).then(function () {
@@ -390,7 +419,7 @@
       pending = Math.max(0, pending - 1);
       status('Not saved: ' + err.message, true);
       if (window.MHAdmin) window.MHAdmin.toast('Not saved: ' + err.message);
-      return refresh().catch(function () { /* keep what's on screen */ });
+      if (pending === 0) return refresh().catch(function () { /* keep what's on screen */ });
     });
     return true;
   }
