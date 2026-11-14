@@ -157,6 +157,7 @@
   var leaveGuard = null; // set by editors with unsaved changes
   function go(hash) { location.hash = hash; }
   function render() {
+    if (!D.load()) return; // not signed in yet (e.g. an Identity email link's #invite_token is being handled)
     var h = location.hash.replace(/^#/, '') || '/';
     var main = $('#main');
     for (var i = 0; i < routes.length; i++) {
