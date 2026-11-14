@@ -67,10 +67,14 @@ Set these in Netlify (Site configuration → Environment variables). Never put v
 | `EMAIL_FROM` | Emails | e.g. `Mirror House Melbourne <orders@mirrorhousemelbourne.com.au>` (domain verified in Resend) |
 | `ADMIN_EMAIL` | New-order alerts | Defaults to the store email in Admin → Settings |
 | `ADMIN_EMAILS` | Admin access (optional) | Comma-separated emails allowed in, as well as Identity users with the `admin` role |
-| `SITE_URL` | Links, sitemap | e.g. `https://mirrorhousemelbourne.com.au`. Defaults to Netlify's site address |
+| `SITE_URL` | Links, sitemap, emails | `https://mirrorhousemelbourne.com.au`. If unset, Netlify's own address for the site is used, then `https://mirrorhousemelbourne.com.au` |
 | `GA_MEASUREMENT_ID` | Google Analytics (optional) | Used only if no ID is saved in Admin → Settings |
 
 The database connection is provided by Netlify Database automatically (`NETLIFY_DB_URL`).
+
+Social media links aren't environment variables: they're set in Admin → Settings → Social media. Instagram starts as
+https://www.instagram.com/mirrorhousemelbourne/ and Facebook is empty. An icon shows in the shop's footer (and header
+on wider screens) only when its link is set, and the links are added to the schema.org `sameAs` for the business.
 
 ## Deploying
 

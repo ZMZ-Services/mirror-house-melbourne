@@ -539,3 +539,12 @@ body.no-scroll { overflow: hidden; }
 .link-btn[disabled], .btn[disabled] { background: #8a837c !important; border-color: #8a837c !important; color: #fff !important; opacity: 1; cursor: not-allowed; }
 .card-dims { font-size: 0.85rem; color: var(--ink-2); margin: -4px 0 2px; letter-spacing: 0.02em; }
 .stock-low { margin: 10px 0 0; color: #8A6A2F; font-weight: 600; font-size: 0.92rem; }
+
+/* Social media links (shown only when set in Admin → Settings) */
+.footer-social { display: flex; gap: 10px; margin-top: 4px; }
+.header-social { display: flex; gap: 4px; }
+.social-link { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; color: inherit; transition: background-color .2s ease, color .2s ease; }
+.site-footer .social-link { border: 1px solid rgba(243, 236, 226, 0.25); color: var(--on-dark); }
+.site-footer .social-link:hover, .site-footer .social-link:focus-visible { background: var(--on-dark); color: var(--ink); }
+.header-social .social-link:hover, .header-social .social-link:focus-visible { background: var(--sand); }
+@media (max-width: 860px) { .header-social { display: none; } }
