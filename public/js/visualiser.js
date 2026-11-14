@@ -2136,6 +2136,7 @@ function initEditor() {
       guideNext();
       const n = guideDot();
       if (n) el.dotLayer.querySelector(`.dot[data-post="${n.i}"][data-end="${n.end}"]`).focus({ preventScroll: true });
+      else el.looksRight.focus({ preventScroll: true });
       return;
     }
     const dirs = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };

@@ -234,6 +234,9 @@ test('Enter on the guided dot moves focus to the next one', async ({ page }) => 
   await page.keyboard.press('Enter');
   await expect(page.locator('#corner-line')).toContainText('Dot 2 of 4');
   await expect(dot(page, 0, 'ceil')).toBeFocused();
+  for (const [i, end] of [[0, 'ceil'], [1, 'floor'], [1, 'ceil']]) { await dot(page, i, end).focus(); await page.keyboard.press('Enter'); }
+  await expect(page.locator('#corner-line')).toContainText('All dots placed');
+  await expect(page.locator('#looks-right-btn')).toBeFocused();
 });
 
 test('the written warning is not rewritten while a dot is being dragged', async ({ page }) => {
