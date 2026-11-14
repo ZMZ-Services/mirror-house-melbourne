@@ -48,24 +48,51 @@ const DEFAULT_LENS = 69;     // across the long side: a phone's 26 mm main camer
 // tuned eye level (horizon) as a manual override, and a tuned lens.
 const SAMPLES = {
   living: {
-    src: '/images/rooms/living.jpg', label: 'Living room', horizon: 0.44, lens: 66,
+    // Real living room photo (2026-11). Two walls meet at the back, behind the kitchen opening.
+    src: 'images/rooms/living-room-2.jpg', label: 'Living room', horizon: 0.519, lens: 78,
     posts: [
-      { edge: 'l', fx: 0, fy: 0.8075, cx: 0, cy: 0 },
-      { fx: 0.217, fy: 0.6445, cx: 0.217, cy: 0.177 },
-      { fx: 0.7725, fy: 0.6445, cx: 0.7725, cy: 0.177 },
-      { edge: 'r', fx: 1, fy: 0.824, cx: 1, cy: 0 }
+      { edge: 'l', fx: 0, fy: 0.814, cx: 0, cy: 0.157 },
+      { fx: 0.5498, fy: 0.6726, cx: 0.5498, cy: 0.3292 },
+      { fx: 0.6807, fy: 0.6923, cx: 0.6807, cy: 0.2504 },
+      { fx: 0.9521, fy: 0.7531, cx: 0.9521, cy: 0.1521 },
+      { edge: 'r', fx: 1, fy: 0.97, cx: 1, cy: 0.10 }
     ],
-    spot: { wall: 1, frac: 0.66 }, floorSpot: { wall: 1, frac: 0.66 }
+    spot: { wall: 2, frac: 0.45 }, floorSpot: { wall: 2, frac: 0.45 }
   },
   bedroom: {
-    src: '/images/rooms/bedroom.jpg', label: 'Bedroom', horizon: 0.452, lens: 66,
+    // Real bedroom photo (2026-11): window wall on the left, bed wall at the back.
+    src: 'images/rooms/bedroom-2.jpg', label: 'Bedroom', horizon: 0.48, lens: 85,
     posts: [
-      { edge: 'l', fx: 0, fy: 0.783, cx: 0, cy: 0 },
-      { fx: 0.209, fy: 0.6535, cx: 0.209, cy: 0.179 },
-      { fx: 0.7756, fy: 0.6535, cx: 0.7756, cy: 0.179 },
-      { edge: 'r', fx: 1, fy: 0.816, cx: 1, cy: 0 }
+      { edge: 'l', fx: 0, fy: 0.8087, cx: 0, cy: 0.0523 },
+      { fx: 0.4297, fy: 0.6577, cx: 0.4297, cy: 0.2571 },
+      { fx: 0.957, fy: 0.8191, cx: 0.957, cy: 0.0673 },
+      { edge: 'r', fx: 1, fy: 0.936, cx: 1, cy: 0.015 }
     ],
-    spot: { wall: 1, frac: 0.5 }, floorSpot: { wall: 2, frac: 0.55 }
+    spot: { wall: 1, frac: 0.82 }, floorSpot: { wall: 1, frac: 0.82 }
+  },
+  vanity: {
+    // Real bathroom photo (2026-11): window wall on the left, vanity wall facing, recessed wall on the right.
+    src: 'images/rooms/bathroom-2.jpg', label: 'Bathroom', horizon: 0.5, lens: 65,
+    posts: [
+      { edge: 'l', fx: 0, fy: 0.90, cx: 0, cy: 0.13 },
+      { fx: 0.3984, fy: 0.725, cx: 0.3984, cy: 0.176 },
+      { fx: 0.6953, fy: 0.777, cx: 0.6953, cy: 0.102 },
+      { edge: 'r', fx: 1, fy: 0.831, cx: 1, cy: 0.024 }
+    ],
+    spot: { wall: 1, frac: 0.5 }, floorSpot: { wall: 1, frac: 0.5 }
+  },
+  entry: {
+    // Real entrance photo (2026-11): front walls either side of a long hallway (one-point view).
+    src: 'images/rooms/entryway-2.jpg', label: 'Grand entrance', horizon: 0.499, lens: 70,
+    posts: [
+      { edge: 'l', fx: 0, fy: 0.819, cx: 0, cy: 0.108 },
+      { fx: 0.3369, fy: 0.819, cx: 0.3369, cy: 0.108 },
+      { fx: 0.4551, fy: 0.6084, cx: 0.4551, cy: 0.3662 },
+      { fx: 0.5752, fy: 0.6084, cx: 0.5752, cy: 0.3662 },
+      { fx: 0.6885, fy: 0.819, cx: 0.6885, cy: 0.108 },
+      { edge: 'r', fx: 1, fy: 0.819, cx: 1, cy: 0.108 }
+    ],
+    spot: { wall: 4, frac: 0.45 }, floorSpot: { wall: 4, frac: 0.2 }
   }
 };
 
@@ -105,17 +132,277 @@ function layoutPreset(kind, photo) {
 
 const MIRRORS = [
   {
-    id: 'grand-royale', slug: 'grand-royale-arched-brass-floor-mirror',
-    name: 'Grand Royale Arch', price: '$1,290',
-    shape: 'arch', w: 0.75, h: 1.95, frame: 0.025, depth: 0.028, floor: true, hangH: 1.25
+    id: 'paris-white', slug: 'paris-window-pane-mirror-white', pic: 'images/products/paris-window-pane-mirror-white.jpg',
+    name: 'Paris Window Pane – White', price: '$300',
+    shape: 'rect', w: 1.00, h: 2.00, frame: 0.035, depth: 0.03, floor: true, hangH: 1.3,
+    panes: { v: [-0.2325, 0, 0.2325], h: [-0.645, -0.3225, 0, 0.3225, 0.645], width: 0.02 },
+    frameColor: 0xF2EFEA, frameMetal: 0.05, frameRough: 0.5, iconStroke: '#CFC8BC'
   },
   {
-    id: 'ondine', slug: 'ondine-wavy-wall-mirror',
-    name: 'Ondine Wavy', price: '$590',
-    shape: 'wavy', w: 0.52, h: 0.90, frame: 0, depth: 0.006, hangH: 1.55
+    id: 'paris-black', slug: 'paris-window-pane-mirror-black', pic: 'images/products/paris-window-pane-mirror-black.jpg',
+    name: 'Paris Window Pane – Black', price: '$300',
+    shape: 'rect', w: 1.00, h: 2.00, frame: 0.035, depth: 0.03, floor: true, hangH: 1.3,
+    panes: { v: [-0.2325, 0, 0.2325], h: [-0.645, -0.3225, 0, 0.3225, 0.645], width: 0.02 },
+    frameColor: 0x151515, frameMetal: 0.2, frameRough: 0.55, iconStroke: '#2B2B2B'
   },
-  { id: 'aurelia', soon: true, name: 'Aurelia Round', shape: 'circle', w: 0.80, h: 0.80, frame: 0.03, depth: 0.03, hangH: 1.6 },
-  { id: 'linea', soon: true, name: 'Linea Rectangle', shape: 'rect', w: 0.60, h: 1.60, frame: 0.02, depth: 0.025, hangH: 1.35 }
+  {
+    id: 'knife-black', slug: 'cut-above-knife-mirror-black', pic: 'images/products/cut-above-knife-mirror-black.jpg',
+    name: 'Cut Above Knife – Black', price: '$250',
+    shape: 'rect', w: 0.40, h: 2.00, frame: 0.012, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0x141414, frameMetal: 0.2, frameRough: 0.5, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'belle-silver', slug: 'belle-beaded-mirror-silver', pic: 'images/products/belle-beaded-mirror-silver.jpg',
+    name: 'Belle Beaded – Silver', price: '$240',
+    shape: 'rect', w: 0.90, h: 1.90, frame: 0.12, depth: 0.04, floor: true, hangH: 1.3,
+    frameColor: 0xD8DCDE, frameMetal: 0.9, frameRough: 0.15, iconStroke: '#A8A8A8'
+  },
+  {
+    id: 'belle-black', slug: 'belle-beaded-mirror-black', pic: 'images/products/belle-beaded-mirror-black.jpg',
+    name: 'Belle Beaded – Black', price: '$240',
+    shape: 'rect', w: 0.90, h: 1.90, frame: 0.12, depth: 0.04, floor: true, hangH: 1.3,
+    frameColor: 0xD8DCDE, frameMetal: 0.9, frameRough: 0.15, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'belle-gold', slug: 'belle-beaded-mirror-gold', pic: 'images/products/belle-beaded-mirror-gold.jpg',
+    name: 'Belle Beaded – Gold', price: '$240',
+    shape: 'rect', w: 0.90, h: 1.90, frame: 0.12, depth: 0.04, floor: true, hangH: 1.3,
+    frameColor: 0xD8DCDE, frameMetal: 0.9, frameRough: 0.15, iconStroke: '#B8913F'
+  },
+  {
+    id: 'haven-warm-wood', slug: 'haven-soft-arch-mirror-warm-wood', pic: 'images/products/haven-soft-arch-mirror-warm-wood.jpg',
+    name: 'Haven Soft Arch – Warm Wood', price: '$300',
+    shape: 'roundrect', radius: 0.5, radiusBottom: 0.09, w: 1.00, h: 1.90, frame: 0.05, depth: 0.045, floor: true, hangH: 1.3,
+    frameColor: 0xC68A4A, frameMetal: 0, frameRough: 0.55, iconStroke: '#B07A3E'
+  },
+  {
+    id: 'haven-walnut', slug: 'haven-soft-arch-mirror-walnut', pic: 'images/products/haven-soft-arch-mirror-walnut.jpg',
+    name: 'Haven Soft Arch – Dark Brown', price: '$300',
+    shape: 'roundrect', radius: 0.5, radiusBottom: 0.09, w: 1.00, h: 1.90, frame: 0.05, depth: 0.045, floor: true, hangH: 1.3,
+    frameColor: 0x5A3A22, frameMetal: 0, frameRough: 0.6, iconStroke: '#5A3A22'
+  },
+  {
+    id: 'haven-black', slug: 'haven-soft-arch-mirror-black', pic: 'images/products/haven-soft-arch-mirror-black.jpg',
+    name: 'Haven Soft Arch – Black', price: '$300',
+    shape: 'roundrect', radius: 0.5, radiusBottom: 0.09, w: 1.00, h: 1.90, frame: 0.05, depth: 0.045, floor: true, hangH: 1.3,
+    frameColor: 0x151515, frameMetal: 0.05, frameRough: 0.6, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'haven-natural', slug: 'haven-soft-arch-mirror-natural', pic: 'images/products/haven-soft-arch-mirror-natural.jpg',
+    name: 'Haven Soft Arch – Natural', price: '$300',
+    shape: 'roundrect', radius: 0.5, radiusBottom: 0.09, w: 1.00, h: 1.90, frame: 0.05, depth: 0.045, floor: true, hangH: 1.3,
+    frameColor: 0xD7B98E, frameMetal: 0, frameRough: 0.6, iconStroke: '#B8925F'
+  },
+  {
+    id: 'haven-white', slug: 'haven-soft-arch-mirror-white', pic: 'images/products/haven-soft-arch-mirror-white.jpg',
+    name: 'Haven Soft Arch – White', price: '$300',
+    shape: 'roundrect', radius: 0.5, radiusBottom: 0.09, w: 1.00, h: 1.90, frame: 0.05, depth: 0.045, floor: true, hangH: 1.3,
+    frameColor: 0xF2EFEA, frameMetal: 0.05, frameRough: 0.5, iconStroke: '#CFC8BC'
+  },
+  {
+    id: 'riviera-gold', slug: 'riviera-rounded-floor-mirror-gold', pic: 'images/products/riviera-rounded-floor-mirror-gold.jpg',
+    name: 'Riviera Rounded – Gold', price: '$330',
+    shape: 'roundrect', radius: 0.22, radiusBottom: 0.03, w: 1.00, h: 2.00, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0xC9A04A, frameMetal: 0.75, frameRough: 0.35, iconStroke: '#B8913F'
+  },
+  {
+    id: 'soho-black', slug: 'soho-slim-frame-mirror-black', pic: 'images/products/soho-slim-frame-mirror-black.jpg',
+    name: 'Soho Slim Frame – Black', price: '$250',
+    shape: 'rect', w: 0.90, h: 1.90, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0x141414, frameMetal: 0.3, frameRough: 0.55, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'cathedral-arch', slug: 'cathedral-arch-window-mirror-black', pic: 'images/products/cathedral-arch-window-mirror-black-styled.jpg',
+    name: 'Cathedral Arch Window – Black', price: '$300',
+    shape: 'arch', w: 1.00, h: 1.90, frame: 0.022, depth: 0.03, floor: true, hangH: 1.3,
+    rings: [0.235], ringWidth: 0.016,
+    panes: { v: [], h: [], width: 0.014, inset: 0.235, left: [0.46, 0.19, -0.34, -0.6], right: [0.43, 0.18, -0.17, -0.65], spokes: [40, 90, 140] },
+    frameColor: 0x161616, frameMetal: 0.45, frameRough: 0.5, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'belgravia-gold', slug: 'belgravia-crest-mirror-gold', pic: 'images/products/belgravia-crest-mirror-gold-2.jpg',
+    name: 'Belgravia Crest – Gold', price: '$599',
+    shape: 'rect', w: 1.20, h: 2.10, frame: 0.09, depth: 0.06, floor: true, hangH: 1.3,
+    frameColor: 0xC9A24E, frameMetal: 0.75, frameRough: 0.35, iconStroke: '#B8913F'
+  },
+  {
+    id: 'belgravia-champagne', slug: 'belgravia-crest-mirror-champagne', pic: 'images/products/belgravia-crest-mirror-champagne-2.jpg',
+    name: 'Belgravia Crest – Champagne', price: '$599',
+    shape: 'rect', w: 1.20, h: 2.10, frame: 0.09, depth: 0.06, floor: true, hangH: 1.3,
+    frameColor: 0xC2AA8A, frameMetal: 0.55, frameRough: 0.4, iconStroke: '#B39C7E'
+  },
+  {
+    id: 'belgravia-black', slug: 'belgravia-crest-mirror-black', pic: 'images/products/belgravia-crest-mirror-black-2.jpg',
+    name: 'Belgravia Crest – Black', price: '$599',
+    shape: 'rect', w: 1.20, h: 2.10, frame: 0.09, depth: 0.06, floor: true, hangH: 1.3,
+    frameColor: 0x151515, frameMetal: 0.2, frameRough: 0.6, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'luxe-arch', slug: 'luxe-ornate-arch-mirror-gold', pic: 'images/products/luxe-ornate-arch-mirror-gold.jpg',
+    name: 'Luxe Ornate Arch – Gold', price: '$450',
+    shape: 'arch', w: 1.28, h: 2.00, frame: 0.045, depth: 0.045, floor: true, hangH: 1.3,
+    crest: { src: 'images/products/luxe-ornate-arch-crest.png', w: 0.61, h: 0.205, lift: 0.03 },
+    frameColor: 0xC9A04A, frameMetal: 0.75, frameRough: 0.35, iconStroke: '#B8913F'
+  },
+  {
+    id: 'halo-210white', slug: 'halo-arch-floor-mirror-white', pic: 'images/products/halo-arch-floor-mirror-white.jpg',
+    name: 'Halo Arch 220 × 120 cm – White', price: '$420',
+    shape: 'arch', w: 1.20, h: 2.20, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0xF1EEE8, frameMetal: 0.1, frameRough: 0.45, iconStroke: '#CFC8BC'
+  },
+  {
+    id: 'halo-210gold', slug: 'halo-arch-floor-mirror-gold', pic: 'images/products/halo-arch-floor-mirror-gold.jpg',
+    name: 'Halo Arch 220 × 120 cm – Gold', price: '$420',
+    shape: 'arch', w: 1.20, h: 2.20, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0xC9A24E, frameMetal: 0.75, frameRough: 0.35, iconStroke: '#B8913F'
+  },
+  {
+    id: 'halo-210black', slug: 'halo-arch-floor-mirror-black', pic: 'images/products/halo-arch-floor-mirror-black.jpg',
+    name: 'Halo Arch 220 × 120 cm – Black', price: '$420',
+    shape: 'arch', w: 1.20, h: 2.20, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0x151515, frameMetal: 0.4, frameRough: 0.5, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'halo-210mwhite', slug: 'halo-arch-floor-mirror-210-white', pic: 'images/products/halo-arch-floor-mirror-white.jpg',
+    name: 'Halo Arch 210 × 120 cm – White', price: '$380',
+    shape: 'arch', w: 1.20, h: 2.10, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0xF1EEE8, frameMetal: 0.1, frameRough: 0.45, iconStroke: '#CFC8BC'
+  },
+  {
+    id: 'halo-210mgold', slug: 'halo-arch-floor-mirror-210-gold', pic: 'images/products/halo-arch-floor-mirror-gold.jpg',
+    name: 'Halo Arch 210 × 120 cm – Gold', price: '$380',
+    shape: 'arch', w: 1.20, h: 2.10, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0xC9A24E, frameMetal: 0.75, frameRough: 0.35, iconStroke: '#B8913F'
+  },
+  {
+    id: 'halo-210mblack', slug: 'halo-arch-floor-mirror-210-black', pic: 'images/products/halo-arch-floor-mirror-black.jpg',
+    name: 'Halo Arch 210 × 120 cm – Black', price: '$380',
+    shape: 'arch', w: 1.20, h: 2.10, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0x151515, frameMetal: 0.4, frameRough: 0.5, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'halo-200white', slug: 'halo-arch-floor-mirror-200-white', pic: 'images/products/halo-arch-floor-mirror-white.jpg',
+    name: 'Halo Arch 200 × 100 cm – White', price: '$330',
+    shape: 'arch', w: 1.00, h: 2.00, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0xF1EEE8, frameMetal: 0.1, frameRough: 0.45, iconStroke: '#CFC8BC'
+  },
+  {
+    id: 'halo-200gold', slug: 'halo-arch-floor-mirror-200-gold', pic: 'images/products/halo-arch-floor-mirror-gold.jpg',
+    name: 'Halo Arch 200 × 100 cm – Gold', price: '$330',
+    shape: 'arch', w: 1.00, h: 2.00, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0xC9A24E, frameMetal: 0.75, frameRough: 0.35, iconStroke: '#B8913F'
+  },
+  {
+    id: 'halo-200black', slug: 'halo-arch-floor-mirror-200-black', pic: 'images/products/halo-arch-floor-mirror-black.jpg',
+    name: 'Halo Arch 200 × 100 cm – Black', price: '$330',
+    shape: 'arch', w: 1.00, h: 2.00, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    frameColor: 0x151515, frameMetal: 0.4, frameRough: 0.5, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'florence-arch', slug: 'florence-window-arch-mirror-black', pic: 'images/products/florence-window-arch-mirror-black.jpg',
+    name: 'Florence Window Arch – Black', price: '$400',
+    shape: 'arch', w: 1.20, h: 2.00, frame: 0.025, depth: 0.03, floor: true, hangH: 1.3,
+    panes: { v: [-0.3, 0, 0.3], h: [-0.7, -0.42, -0.14, 0.14, 0.43, 0.72], width: 0.014 },
+    frameColor: 0x151515, frameMetal: 0.5, frameRough: 0.5, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'versailles190-gold', slug: 'versailles-ornate-mirror-190-gold', pic: 'images/products/versailles-ornate-mirror-gold.jpg',
+    name: 'Versailles Ornate 190 × 90 cm – Gold', price: '$250',
+    shape: 'rect', w: 0.90, h: 1.90, frame: 0.095, depth: 0.055, floor: true, hangH: 1.3,
+    frameColor: 0xC9A24E, frameMetal: 0.7, frameRough: 0.35, iconStroke: '#B8913F'
+  },
+  {
+    id: 'versailles190-black', slug: 'versailles-ornate-mirror-190-black', pic: 'images/products/versailles-ornate-mirror-black-2.jpg',
+    name: 'Versailles Ornate 190 × 90 cm – Black', price: '$250',
+    shape: 'rect', w: 0.90, h: 1.90, frame: 0.095, depth: 0.055, floor: true, hangH: 1.3,
+    frameColor: 0x141414, frameMetal: 0, frameRough: 0.7, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'versailles190-champagne', slug: 'versailles-ornate-mirror-190-champagne', pic: 'images/products/versailles-ornate-mirror-champagne-2.jpg',
+    name: 'Versailles Ornate 190 × 90 cm – Champagne', price: '$250',
+    shape: 'rect', w: 0.90, h: 1.90, frame: 0.095, depth: 0.055, floor: true, hangH: 1.3,
+    frameColor: 0xC2AA8A, frameMetal: 0.55, frameRough: 0.4, iconStroke: '#B39C7E'
+  },
+  {
+    id: 'versailles-gold', slug: 'versailles-ornate-mirror-gold', pic: 'images/products/versailles-ornate-mirror-gold.jpg',
+    name: 'Versailles Ornate 220 × 110 cm – Gold', price: '$340',
+    shape: 'rect', w: 1.10, h: 2.20, frame: 0.11, depth: 0.06, floor: true, hangH: 1.3,
+    frameColor: 0xC9A24E, frameMetal: 0.7, frameRough: 0.35, iconStroke: '#B8913F'
+  },
+  {
+    id: 'versailles-black', slug: 'versailles-ornate-mirror-black', pic: 'images/products/versailles-ornate-mirror-black-2.jpg',
+    name: 'Versailles Ornate 220 × 110 cm – Black', price: '$340',
+    shape: 'rect', w: 1.10, h: 2.20, frame: 0.11, depth: 0.06, floor: true, hangH: 1.3,
+    frameColor: 0x141414, frameMetal: 0, frameRough: 0.7, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'versailles-champagne', slug: 'versailles-ornate-mirror-champagne', pic: 'images/products/versailles-ornate-mirror-champagne-2.jpg',
+    name: 'Versailles Ornate 220 × 110 cm – Champagne', price: '$340',
+    shape: 'rect', w: 1.10, h: 2.20, frame: 0.11, depth: 0.06, floor: true, hangH: 1.3,
+    frameColor: 0xC2AA8A, frameMetal: 0.55, frameRough: 0.4, iconStroke: '#B39C7E'
+  },
+  {
+    id: 'statement-gold', slug: 'statement-curve-mirror-gold', pic: 'images/signature-gold.jpg',
+    name: 'Statement Curve – Gold', price: '$350',
+    shape: 'rect', w: 1.00, h: 2.00, frame: 0.028, depth: 0.028, floor: true, hangH: 1.3,
+    frameColor: 0xC9A45C, curves: true
+  },
+  {
+    id: 'statement-black', slug: 'statement-curve-mirror-black', pic: 'images/signature-black.jpg',
+    name: 'Statement Curve – Black', price: '$350',
+    shape: 'rect', w: 1.00, h: 2.00, frame: 0.028, depth: 0.028, floor: true, hangH: 1.3,
+    frameColor: 0x111111, frameMetal: 0.35, frameRough: 0.5, iconStroke: '#2B2B2B', curves: true
+  },
+  {
+    id: 'studio-black', slug: 'studio-box-mirror-black', pic: 'images/products/studio-box-mirror-black-2.jpg',
+    name: 'Studio Box – Black', price: '$250',
+    shape: 'rect', w: 1.00, h: 2.00, frame: 0.035, depth: 0.045, floor: true, hangH: 1.3,
+    frameColor: 0x161514, frameMetal: 0, frameRough: 0.65, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'studio-walnut', slug: 'studio-box-mirror-walnut', pic: 'images/products/studio-box-mirror-walnut.jpg',
+    name: 'Studio Box – Walnut', price: '$250',
+    shape: 'rect', w: 1.00, h: 2.00, frame: 0.035, depth: 0.045, floor: true, hangH: 1.3,
+    frameColor: 0x6E4326, frameMetal: 0, frameRough: 0.65, iconStroke: '#6E4326'
+  },
+  {
+    id: 'studio-natural-oak', slug: 'studio-box-mirror-natural-oak', pic: 'images/products/studio-box-mirror-natural-oak.jpg',
+    name: 'Studio Box – Natural Oak', price: '$250',
+    shape: 'rect', w: 1.00, h: 2.00, frame: 0.035, depth: 0.045, floor: true, hangH: 1.3,
+    frameColor: 0xC9A577, frameMetal: 0, frameRough: 0.65, iconStroke: '#B8925F'
+  },
+  {
+    id: 'monolith-concrete', slug: 'monolith-arch-mirror-concrete', pic: 'images/products/monolith-arch-mirror-concrete.jpg',
+    name: 'Monolith Arch – Concrete', price: '$300',
+    shape: 'arch', w: 1.00, h: 2.00, frame: 0.07, depth: 0.04, floor: true, hangH: 1.3,
+    frameColor: 0xD8D2C7, frameMetal: 0, frameRough: 0.9, iconStroke: '#B9B1A3'
+  },
+  {
+    id: 'monolith-black', slug: 'monolith-arch-mirror-black', pic: 'images/products/monolith-arch-mirror-black.jpg',
+    name: 'Monolith Arch – Black', price: '$300',
+    shape: 'arch', w: 1.00, h: 2.00, frame: 0.07, depth: 0.04, floor: true, hangH: 1.3,
+    frameColor: 0x161616, frameMetal: 0, frameRough: 0.7, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'gatsby-arch', slug: 'gatsby-arch-mirror-black', pic: 'images/products/gatsby-arch-mirror-black-2.jpg',
+    name: 'Gatsby Arch – Black', price: '$240',
+    shape: 'arch', w: 1.00, h: 2.00, frame: 0.02, depth: 0.03, floor: true, hangH: 1.3,
+    rings: [0.05, 0.1, 0.15], ringWidth: 0.012, discs: [[-0.413, 0.42, 0.093], [0.413, 0.18, 0.093]],
+    frameColor: 0x121212, frameMetal: 0.6, frameRough: 0.45, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'duchess-arch', slug: 'duchess-arch-mirror-black', pic: 'images/products/duchess-arch-mirror-black.jpg',
+    name: 'Duchess Arch – Black', price: '$300',
+    shape: 'arch', w: 1.00, h: 2.00, frame: 0.03, depth: 0.03, floor: true, hangH: 1.3,
+    crest: { src: 'images/products/duchess-crest.png', w: 0.48, h: 0.18, lift: 0.035 },
+    frameColor: 0x151413, frameMetal: 0.6, frameRough: 0.4, iconStroke: '#2B2B2B'
+  },
+  {
+    id: 'wavy-edge', slug: 'wavy-edge-wall-mirror', pic: 'images/products/wavy-edge-wall-mirror.jpg',
+    name: 'Wavy Edge – Black', price: '$300',
+    shape: 'wavyrect', w: 1.00, h: 2.00, frame: 0.05, depth: 0.03, hangH: 1.3,
+    frameColor: 0x141414, frameMetal: 0, frameRough: 0.5, iconStroke: '#2B2B2B'
+  }
 ];
 
 // ---------------------------------------------------------------------------
@@ -132,14 +419,18 @@ const state = {
   ceilingH: 2.7, ceilingMode: true, camH: 1.4,
   horizon: SAMPLES.living.horizon,   // manual eye level (fraction of height) or null for auto
   layout: null,
-  mirrorId: 'grand-royale',
+  mirrorId: 'statement-gold',
   mirrorWall: 1,
-  mount: 'lean',
+  mount: 'hang',
   place: { s: 0, h: 1.2 },
+  turned: false,             // mirror turned on its side (horizontal)
   touched: false              // has the shopper dragged a dot yet (hides the hand hint)
 };
 const mirrorDef = () => MIRRORS.find((m) => m.id === state.mirrorId);
-const isLeaning = () => !!mirrorDef().floor && state.mount === 'lean';
+// All mirrors are wall-hung: no leaning option.
+const isLeaning = () => false;
+// Size the mirror takes up on the wall: width and height swap when it's turned horizontal.
+const footprint = (def, turned = state.turned) => (turned ? { w: def.h, h: def.w } : { w: def.w, h: def.h });
 
 // ---------------------------------------------------------------------------
 // DOM
@@ -702,6 +993,27 @@ function insetPoints(pts, d) {
     return new THREE.Vector2(p.x - (ty / len) * d, p.y + (tx / len) * d);
   });
 }
+// Rectangle with a rippled edge (Wavy Edge mirror). The ripple follows the edge, so the frame keeps an even width.
+function wavyRectPts(def, inset) {
+  const amp = 0.018, wave = 0.15, r = 0.08;
+  const hw = def.w / 2 - amp - inset, hh = def.h / 2 - amp - inset, rr = Math.max(0.005, r - inset * 0.5);
+  const base = [];
+  const seg = (x0, y0, x1, y1, nx, ny) => { const L = Math.hypot(x1 - x0, y1 - y0), n = Math.max(2, Math.ceil(L / 0.005)); for (let i = 0; i < n; i++) { const t = i / n; base.push([x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, nx, ny]); } };
+  const arc = (cx, cy, a0) => { for (let i = 0; i < 16; i++) { const a = a0 + (Math.PI / 2) * (i / 16); base.push([cx + rr * Math.cos(a), cy + rr * Math.sin(a), Math.cos(a), Math.sin(a)]); } };
+  seg(-hw + rr, -hh, hw - rr, -hh, 0, -1); arc(hw - rr, -hh + rr, -Math.PI / 2);
+  seg(hw, -hh + rr, hw, hh - rr, 1, 0); arc(hw - rr, hh - rr, 0);
+  seg(hw - rr, hh, -hw + rr, hh, 0, 1); arc(-hw + rr, hh - rr, Math.PI / 2);
+  seg(-hw, hh - rr, -hw, -hh + rr, -1, 0); arc(-hw + rr, -hh + rr, Math.PI);
+  // Same number of ripples on the outer and inner edge, so they line up.
+  const cum = [0];
+  for (let i = 1; i < base.length; i++) cum.push(cum[i - 1] + Math.hypot(base[i][0] - base[i - 1][0], base[i][1] - base[i - 1][1]));
+  const total = cum[cum.length - 1] + Math.hypot(base[0][0] - base[base.length - 1][0], base[0][1] - base[base.length - 1][1]);
+  const ripples = Math.round((2 * (def.w + def.h)) / wave);
+  return base.map((p, i) => {
+    const o = amp * Math.sin((2 * Math.PI * ripples * cum[i]) / total);
+    return new THREE.Vector2(p[0] + p[2] * o, p[1] + p[3] * o);
+  });
+}
 const wavyCache = new Map();
 function wavyPts(def) {
   if (!wavyCache.has(def.id)) wavyCache.set(def.id, wavyBase(def.w, def.h));
@@ -716,6 +1028,17 @@ function shapeFor(def, inset = 0) {
     s.absarc(0, cy, r, 0, Math.PI, false); s.lineTo(-r, -h / 2 + inset);
   } else if (def.shape === 'circle') {
     s.absarc(0, 0, w / 2 - inset, 0, Math.PI * 2, false);
+  } else if (def.shape === 'wavyrect') {
+    s.setFromPoints(wavyRectPts(def, inset));
+    s.closePath();
+  } else if (def.shape === 'roundrect') {
+    // Rectangle with rounded corners: a bigger radius on top, a small one at the bottom.
+    const x = w / 2 - inset, y = h / 2 - inset;
+    const rt = Math.max(0.001, (def.radius || 0.1) - inset), rb = Math.max(0.001, (def.radiusBottom ?? def.radius ?? 0.1) - inset);
+    s.moveTo(-x + rb, -y); s.lineTo(x - rb, -y); s.absarc(x - rb, -y + rb, rb, -Math.PI / 2, 0, false);
+    s.lineTo(x, y - rt); s.absarc(x - rt, y - rt, rt, 0, Math.PI / 2, false);
+    s.lineTo(-x + rt, y); s.absarc(-x + rt, y - rt, rt, Math.PI / 2, Math.PI, false);
+    s.lineTo(-x, -y + rb); s.absarc(-x + rb, -y + rb, rb, Math.PI, Math.PI * 1.5, false);
   } else if (def.shape === 'rect') {
     const x = w / 2 - inset, y = h / 2 - inset;
     s.moveTo(-x, -y); s.lineTo(x, -y); s.lineTo(x, y); s.lineTo(-x, y); s.lineTo(-x, -y);
@@ -761,6 +1084,49 @@ function shadowMesh(def, kind, opacity) {
   return mesh;
 }
 
+// Extra mirrors: earlier picks stay in the room while the customer adds and moves another one.
+const extraMirrors = [];
+function clearExtraMirrors() {
+  if (!extraMirrors.length) return;
+  const keep = mirror;
+  while (extraMirrors.length) { mirror = extraMirrors.pop(); disposeMirror(); }
+  mirror = keep;
+  syncExtraUi();
+}
+function syncExtraUi() {
+  const clr = document.getElementById('clear-mirrors-btn'), lbl = document.getElementById('add-mirror-label');
+  if (clr) clr.style.display = extraMirrors.length ? '' : 'none';
+  const txt = extraMirrors.length ? 'Add another mirror (' + (extraMirrors.length + 1) + ' in room)' : 'Add another mirror';
+  if (lbl) lbl.textContent = txt;
+  const lbl3 = document.getElementById('add-mirror-label-3');
+  if (lbl3) lbl3.textContent = txt;
+}
+// Move the current mirror along the wall so it doesn't sit on top of the ones already placed.
+function offsetFromExtras() {
+  if (!extraMirrors.length || !mirror || !state.layout || !state.place) return;
+  const wall = currentWall(); if (!wall) return;
+  const def = footprint(mirror.def), gap = 0.25;
+  const taken = extraMirrors.filter((m) => m.wallIndex === state.mirrorWall).map((m) => { const fw = footprint(m.def, m.turned).w; return [m.s - fw / 2, m.s + fw / 2]; });
+  const free = (s) => s - def.w / 2 > 0.04 && s + def.w / 2 < wall.len - 0.04 && taken.every(([a, b]) => s + def.w / 2 + gap / 2 < a || s - def.w / 2 - gap / 2 > b);
+  if (free(state.place.s)) return;
+  let best = null;
+  for (let d = 0.05; d < wall.len; d += 0.05) {
+    for (const s of [state.place.s + d, state.place.s - d]) if (free(s)) { best = s; break; }
+    if (best !== null) break;
+  }
+  if (best !== null) { state.place.s = best; placeMirror(); }
+}
+function addAnotherMirror() {
+  if (!mirror) return;
+  mirror.wallIndex = state.mirrorWall; mirror.s = state.place.s;
+  extraMirrors.push(mirror);
+  mirror = null;
+  buildMirror();
+  offsetFromExtras();
+  syncExtraUi();
+  goStep(3);
+}
+
 function disposeMirror() {
   if (!mirror) return;
   scene.remove(mirror.mount);
@@ -770,6 +1136,94 @@ function disposeMirror() {
     if (o.material) { if (o.material.alphaMap) o.material.alphaMap.dispose(); o.material.dispose(); }
   });
   mirror = null;
+}
+
+// Two large intersecting arcs laid over the glass (Statement Curve mirrors).
+// Gatsby: thin arch lines inside the frame, open at the bottom where they meet the base.
+function archStroke(def, inset, t) {
+  const x = def.w / 2 - inset, cy = def.h / 2 - def.w / 2, yb = -def.h / 2 + def.frame;
+  const o = x + t / 2, i = x - t / 2, s = new THREE.Shape();
+  s.moveTo(-o, yb); s.lineTo(-o, cy); s.absarc(0, cy, o, Math.PI, 0, true);
+  s.lineTo(o, yb); s.lineTo(i, yb); s.lineTo(i, cy); s.absarc(0, cy, i, 0, Math.PI, false);
+  s.lineTo(-i, yb);
+  return s;
+}
+function addRings(def, tilt, pickables, glassZ, material) {
+  def.rings.forEach((inset) => {
+    const geo = new THREE.ExtrudeGeometry(archStroke(def, inset, def.ringWidth || 0.012), { depth: 0.008, curveSegments: 48, bevelEnabled: false });
+    const mesh = new THREE.Mesh(geo, material);
+    mesh.position.z = glassZ;
+    tilt.add(mesh); pickables.push(mesh);
+  });
+}
+// Gatsby: round metal accents sitting over the arch lines.
+function addDiscs(def, tilt, pickables, glassZ, material) {
+  def.discs.forEach(([x, y, r]) => {
+    const geo = new THREE.CylinderGeometry(r, r, 0.018, 48);
+    const mesh = new THREE.Mesh(geo, material);
+    mesh.rotation.x = Math.PI / 2;
+    mesh.position.set(x, y, glassZ + 0.017);
+    tilt.add(mesh); pickables.push(mesh);
+  });
+}
+// Florence: thin metal glazing bars that divide the glass into window panes, clipped to the arch.
+function addPanes(def, tilt, pickables, glassZ, material) {
+  const P = def.panes, r = def.w / 2 - def.frame, isRect = def.shape !== 'arch', cy = isRect ? def.h / 2 - def.frame : def.h / 2 - def.w / 2, bottom = -def.h / 2 + def.frame;
+  const bar = (x, y, w, h) => {
+    if (w <= 0 || h <= 0) return;
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.012), material);
+    mesh.position.set(x, y, glassZ + 0.008);
+    tilt.add(mesh); pickables.push(mesh);
+  };
+  P.v.forEach((x) => { const top = isRect ? cy : cy + Math.sqrt(Math.max(0, r * r - x * x)); bar(x, (top + bottom) / 2, P.width, top - bottom); });
+  P.h.forEach((y) => { const hw = y <= cy ? r : Math.sqrt(Math.max(0, r * r - (y - cy) * (y - cy))); bar(0, y, hw * 2, P.width); });
+  // Cathedral: bars only in the side columns beside an inner arch, and spokes fanning out above it.
+  if (P.inset) {
+    const ri = def.w / 2 - P.inset;
+    const side = (y, dir) => { const hw = y <= cy ? r : Math.sqrt(Math.max(0, r * r - (y - cy) * (y - cy))); if (hw > ri) bar(dir * (hw + ri) / 2, y, hw - ri, P.width); };
+    (P.left || []).forEach((y) => side(y, -1));
+    (P.right || []).forEach((y) => side(y, 1));
+    (P.spokes || []).forEach((deg) => {
+      const a = deg * Math.PI / 180, len = r - ri, m = (r + ri) / 2;
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(P.width, len, 0.012), material);
+      mesh.position.set(m * Math.cos(a), cy + m * Math.sin(a), glassZ + 0.008);
+      mesh.rotation.z = a - Math.PI / 2;
+      tilt.add(mesh); pickables.push(mesh);
+    });
+  }
+}
+// Duchess: the carved crest, cut out from the product photo, sitting on top of the arch.
+const crestTextures = new Map();
+function addCrest(def, tilt, pickables) {
+  const c = def.crest;
+  if (!crestTextures.has(c.src)) {
+    const tex = new THREE.TextureLoader().load(c.src, () => { needsRender = true; });
+    tex.colorSpace = THREE.SRGBColorSpace;
+    crestTextures.set(c.src, tex);
+  }
+  const mat = new THREE.MeshStandardMaterial({ map: crestTextures.get(c.src), alphaTest: 0.45, roughness: 0.55, metalness: 0.25, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(c.w, c.h), mat);
+  mesh.position.set(0, def.h / 2 + c.lift, def.depth + 0.004);
+  tilt.add(mesh); pickables.push(mesh);
+}
+
+function addCurves(def, tilt, pickables, glassZ, material) {
+  const hw = def.w / 2 - def.frame, hh = def.h / 2 - def.frame;
+  const R = def.h * 0.575;              // arc radius
+  const d = -hw + 0.02 + R;             // circle centre offset from the middle
+  const t0 = Math.asin(Math.min(1, hh / R));
+  const arc = (cx, a0, a1) => {
+    const pts = [];
+    for (let i = 0; i <= 64; i++) {
+      const a = a0 + (a1 - a0) * (i / 64);
+      pts.push(new THREE.Vector3(cx + R * Math.cos(a), R * Math.sin(a), glassZ + 0.006));
+    }
+    const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 96, 0.0095, 12, false);
+    const mesh = new THREE.Mesh(geo, material);
+    tilt.add(mesh); pickables.push(mesh);
+  };
+  arc(d, Math.PI - t0, Math.PI + t0);   // left-bulging arc
+  arc(-d, -t0, t0);                     // right-bulging arc
 }
 
 function buildMirror() {
@@ -787,9 +1241,14 @@ function buildMirror() {
       depth: def.depth - 0.004, curveSegments: 72, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.0018, bevelSegments: 3
     });
     geo.translate(0, 0, 0.002);
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: BRASS, metalness: 1, roughness: 0.28, envMapIntensity: 0.8 }));
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: def.frameColor || BRASS, metalness: def.frameMetal ?? 1, roughness: def.frameRough ?? 0.28, envMapIntensity: 0.8 }));
     tilt.add(m); pickables.push(m);
     glassZ = def.depth - 0.009;
+    if (def.curves) addCurves(def, tilt, pickables, glassZ, m.material);
+    if (def.rings) addRings(def, tilt, pickables, glassZ, m.material);
+    if (def.discs) addDiscs(def, tilt, pickables, glassZ, m.material);
+    if (def.panes) addPanes(def, tilt, pickables, glassZ, m.material);
+    if (def.crest) addCrest(def, tilt, pickables);
   } else {
     const ring = shapeFor(def, 0);
     ring.holes.push(shapeFor(def, 0.012));
@@ -815,7 +1274,7 @@ function buildMirror() {
   floorShadow.rotation.x = -Math.PI / 2;
   mount.add(floorShadow);
   scene.add(mount);
-  mirror = { def, mount, tilt, reflector, pickables, wallShadow, floorShadow };
+  mirror = { def, mount, tilt, reflector, pickables, wallShadow, floorShadow, turned: state.turned };
   placeMirror();
 }
 
@@ -826,7 +1285,7 @@ function currentWall() {
   return L.walls[state.mirrorWall];
 }
 
-function fits(wall, def) { return wall && wall.len >= def.w + 0.08; }
+function fits(wall, def) { return wall && wall.len >= footprint(def).w + 0.08; }
 
 // Pick the wall and spot for the current mirror (sample presets, else the wall facing the camera).
 function defaultPlacement() {
@@ -841,11 +1300,12 @@ function defaultPlacement() {
   }
   state.mirrorWall = wi;
   const frac = spot && spot.wall === wi ? spot.frac : 0.5;
-  state.place = { s: frac * L.walls[wi].len, h: isLeaning() ? def.h / 2 : def.hangH };
+  const minBottom = (state.source !== 'upload' && state.preset && state.preset.minBottom) || 0;
+  state.place = { s: frac * L.walls[wi].len, h: isLeaning() ? def.h / 2 : Math.max(def.hangH, minBottom + footprint(def).h / 2) };
 }
 
 function clampPlacement() {
-  const def = mirrorDef(), L = state.layout, wl = currentWall();
+  const def = footprint(mirrorDef()), L = state.layout, wl = currentWall();
   const m = 0.03;
   const sMin = def.w / 2 + m, sMax = wl.len - def.w / 2 - m;
   state.place.s = sMin <= sMax ? clamp(state.place.s, sMin, sMax) : wl.len / 2;
@@ -870,8 +1330,10 @@ function placeMirror() {
   const cy = lean ? (def.h / 2) * Math.cos(th) + 0.002 : state.place.h;
   const cz = lean ? STANDOFF + (def.h / 2) * Math.sin(th) : STANDOFF;
   mirror.tilt.position.set(0, cy, cz);
-  mirror.tilt.rotation.set(-th, 0, 0);
+  const spin = mirror.turned ? Math.PI / 2 : 0;   // horizontal: turn the whole mirror a quarter on the wall
+  mirror.tilt.rotation.set(-th, 0, spin);
   mirror.wallShadow.position.set(0, cy - (lean ? 0.03 : 0.018), 0.003);
+  mirror.wallShadow.rotation.z = spin;
   mirror.wallShadow.material.opacity = lean ? 0.2 : 0.4;
   mirror.floorShadow.visible = lean;
   mirror.floorShadow.position.set(0, 0.003, def._floorDepth / 2);
@@ -1531,12 +1993,23 @@ function shapeIcon(def) {
   const vbW = 100, vbH = 125, pad = 10;
   const k = Math.min((vbW - pad * 2) / def.w, (vbH - pad * 2) / def.h);
   const d = shapeFor(def, 0).getPoints(48).map((p, i) => `${i ? 'L' : 'M'}${(vbW / 2 + p.x * k).toFixed(1)},${(vbH / 2 - p.y * k).toFixed(1)}`).join('') + 'Z';
-  const stroke = def.frame > 0 ? '#A8823A' : '#9AA09E';
-  return `<svg viewBox="0 0 ${vbW} ${vbH}" aria-hidden="true" focusable="false"><path d="${d}" fill="#E6E9E7" stroke="${stroke}" stroke-width="${def.frame > 0 ? 4 : 2}"/></svg>`;
+  const stroke = def.iconStroke || (def.frame > 0 ? '#A8823A' : '#9AA09E');
+  let curves = '';
+  if (def.curves) {
+    const hw = def.w / 2 - def.frame, hh = def.h / 2 - def.frame, R = def.h * 0.575, cxo = -hw + 0.02 + R, t0 = Math.asin(Math.min(1, hh / R));
+    const arcPath = (cx, a0, a1) => Array.from({ length: 33 }, (_, i) => {
+      const a = a0 + (a1 - a0) * (i / 32);
+      return (i ? 'L' : 'M') + (vbW / 2 + (cx + R * Math.cos(a)) * k).toFixed(1) + ',' + (vbH / 2 - R * Math.sin(a) * k).toFixed(1);
+    }).join('');
+    curves = '<path d="' + arcPath(cxo, Math.PI - t0, Math.PI + t0) + arcPath(-cxo, -t0, t0) + '" fill="none" stroke="' + stroke + '" stroke-width="2.5"/>';
+  }
+  return `<svg viewBox="0 0 ${vbW} ${vbH}" aria-hidden="true" focusable="false"><path d="${d}" fill="#E6E9E7" stroke="${stroke}" stroke-width="${def.frame > 0 ? 4 : 2}"/>${curves}</svg>`;
 }
 const cm = (m) => Math.round(m * 100);
-const dimsText = (def) => `${cm(def.w)} × ${cm(def.h)} cm`;
-const picHtml = (def) => (def.slug ? `<img src="/images/products/${def.slug}.jpg" alt="" loading="lazy" data-fallback="${def.id}">` : shapeIcon(def));
+// Height first, to match the shop: short form on the mirror cards, full form for the chosen mirror.
+const dimsText = (def) => `${cm(def.h)} × ${cm(def.w)} cm`;
+const dimsLong = (def) => `${cm(def.h)} cm high × ${cm(def.w)} cm wide`;
+const picHtml = (def) => (def.slug ? `<img src="${def.pic || `/images/products/${def.slug}.jpg`}" alt="" loading="lazy" data-fallback="${def.id}">` : shapeIcon(def));
 function wirePicFallbacks(root) {
   root.querySelectorAll('img[data-fallback]').forEach((img) => img.addEventListener('error', () => {
     const def = MIRRORS.find((m) => m.id === img.dataset.fallback);
@@ -1558,7 +2031,7 @@ function renderMirrorList() {
 function selectMirror(id, focus) {
   if (id === state.mirrorId && mirror) return;
   state.mirrorId = id;
-  if (mirrorDef().floor) state.mount = 'lean';
+  state.mount = 'hang';
   syncMirrorUi();
   if (focus) $(`#mirror-${id}`).focus();
   if (!renderer || !state.layout) return;
@@ -1566,6 +2039,7 @@ function selectMirror(id, focus) {
   defaultPlacement();
   if (fits(state.layout.walls[keepWall], mirrorDef()) && state.source === 'upload') state.mirrorWall = keepWall;
   buildMirror();
+  offsetFromExtras();
 }
 
 function syncMirrorUi() {
@@ -1578,8 +2052,9 @@ function syncMirrorUi() {
   el.chosenPic.innerHTML = picHtml(def);
   wirePicFallbacks(el.chosenPic);
   el.chosenName.textContent = def.name;
-  el.chosenMeta.textContent = `${dimsText(def)} · ${def.soon ? 'Coming soon' : def.price}`;
-  el.lean.hidden = !def.floor;
+  el.chosenMeta.textContent = `${dimsLong(footprint(def))} · ${def.soon ? 'Coming soon' : def.price}`;
+  document.querySelectorAll('[data-turn]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.turn === 'h') === state.turned)));
+  el.lean.hidden = true;
   el.lean.setAttribute('aria-checked', String(state.mount === 'lean'));
   el.leanLabel.textContent = state.mount === 'lean' ? 'Leaning on the floor' : 'Hanging on the wall';
   if (def.soon) {
@@ -1591,6 +2066,22 @@ function syncMirrorUi() {
     el.addBtn.disabled = false;
     el.addLabel.textContent = `Add to bag · ${def.price}`;
   }
+}
+
+// Turn the current mirror between vertical (upright) and horizontal (on its side).
+function turnMirror(horizontal) {
+  if (state.turned === horizontal) return;
+  state.turned = horizontal;
+  if (mirror) {
+    mirror.turned = horizontal;
+    if (state.layout && !fits(currentWall(), mirror.def)) {
+      const L = state.layout, alt = L.walls.map((w) => w.i).filter((i) => fits(L.walls[i], mirror.def)).sort((a, b) => L.walls[b].len - L.walls[a].len)[0];
+      if (alt != null) { state.mirrorWall = alt; state.place.s = L.walls[alt].len / 2; }
+    }
+    placeMirror();
+    offsetFromExtras();
+  }
+  syncMirrorUi();
 }
 
 function initMirrorUi() {
@@ -1614,6 +2105,7 @@ function initMirrorUi() {
     syncMirrorUi();
     placeMirror();
   });
+  document.querySelectorAll('[data-turn]').forEach((b) => b.addEventListener('click', () => turnMirror(b.dataset.turn === 'h')));
   el.reset.addEventListener('click', () => resetView());
   el.coachOk.addEventListener('click', hideCoach);
 }
@@ -1624,6 +2116,7 @@ function initMirrorUi() {
 
 function goStep(n) {
   const prev = state.step;
+  if (n <= 2) clearExtraMirrors();
   state.step = n;
   for (let k = 1; k <= 4; k++) $(`#step-${k}`).hidden = k !== n;
   [...el.dots.children].forEach((li, i) => {
@@ -1657,6 +2150,9 @@ function initSteps() {
   el.looksRight.addEventListener('click', () => goStep(3));
   el.mirrorDone.addEventListener('click', () => goStep(4));
   el.startAgain.addEventListener('click', () => goStep(1));
+  document.getElementById('add-mirror-btn')?.addEventListener('click', addAnotherMirror);
+  document.getElementById('add-mirror-btn-3')?.addEventListener('click', addAnotherMirror);
+  document.getElementById('clear-mirrors-btn')?.addEventListener('click', () => { clearExtraMirrors(); needsRender = true; });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && state.step === 2 && !document.querySelector('.cart-drawer.is-open')) goStep(3);
   });

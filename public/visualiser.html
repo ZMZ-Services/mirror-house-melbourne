@@ -1,13 +1,8 @@
 <!DOCTYPE html>
 <html lang="en-AU">
 <head>
+  <script>window.MH_PREVIEW = true;</script>
   <meta charset="UTF-8">
-  <script>
-    window.sentryOnLoad = function () {
-      Sentry.init({ environment: location.hostname.includes("localhost") ? "development" : "production" });
-    };
-  </script>
-  <script async src="https://js.sentry-cdn.com/3166fd799dc40d46aba21390b5c51fc3.min.js" crossorigin="anonymous"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Try It in Your Room | Mirror House Melbourne</title>
   <meta name="description" content="See a Mirror House mirror in your own room. Snap a photo, tap the corners and place a real-size mirror with a live reflection. Your photo stays on your device.">
@@ -15,10 +10,10 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="Try It in Your Room | Mirror House Melbourne">
   <meta property="og:description" content="Place a real-size mirror in a photo of your room and see the reflection in 3D.">
-  <meta property="og:image" content="/images/og-image.jpg">
+  <meta property="og:image" content="images/og-image.jpg">
   <meta property="og:locale" content="en_AU">
 
-  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="css/theme.css">
 
   <style>
     :root { --hdr: 77px; }
@@ -325,30 +320,31 @@
     }
   }
   </script>
-  <script type="module" src="/js/visualiser.js"></script>
+  <script type="module" src="js/visualiser.js"></script>
 </head>
 <body class="viz-page">
 
   <aside class="announcement-bar" aria-label="Store announcement">
-    <span>Free fragile freight on orders over $150 · 30-day in-home trial</span>
+    <span>Delivered from Point Cook · Delivery calculated at checkout</span>
     <span class="announcement-divider" aria-hidden="true">|</span>
-    <span>Use code <strong>WELCOME10</strong> for 10% off your first order</span>
+    <span>Launch offer: 10% off your first order with code <strong>WELCOME10</strong></span>
   </aside>
 
   <header class="site-header" id="site-header">
     <div class="container header-inner">
       <div class="brand-logo">
-        <a href="/" class="brand-title">MIRROR HOUSE</a>
-        <span class="brand-subtitle">Melbourne • Architectural Mirrors & Homewares</span>
+        <a href="index.html" class="brand-title">MIRROR HOUSE</a>
+        <span class="brand-subtitle">Melbourne • Architectural Mirrors</span>
       </div>
 
       <nav class="site-nav" aria-label="Primary">
         <ul class="nav-links">
-          <li><a href="/" class="nav-link">Shop All</a></li>
-          <li><a href="/#curated-showcase" class="nav-link">Arch Mirrors</a></li>
-          <li><a href="/visualiser.html" class="nav-link active" aria-current="page">Try in your room</a></li>
-          <li><a href="/#guarantee-section" class="nav-link">Delivery Promise</a></li>
-          <li><a href="/#faq-section" class="nav-link">Hanging & FAQ</a></li>
+          <li><a href="index.html?collection=all#collection-section" class="nav-link">Shop All</a></li>
+          <li><a href="index.html?collection=arch" class="nav-link">Arch Mirrors</a></li>
+          <li><a href="index.html?collection=ornate" class="nav-link">Ornate Mirrors</a></li>
+          <li><a href="visualiser.html" class="nav-link active" aria-current="page">Try in your room</a></li>
+          <li><a href="index.html#guarantee-section" class="nav-link">Delivery Promise</a></li>
+          <li><a href="index.html#faq-section" class="nav-link">Hanging & FAQ</a></li>
         </ul>
       </nav>
 
@@ -460,12 +456,16 @@
           <p class="sub-label">Or try ours</p>
           <div class="sample-row">
             <button type="button" class="sample-thumb" id="sample-living" data-sample="living" aria-pressed="false">
-              <img src="/images/rooms/living.jpg" alt="" width="160" height="120">
+              <img src="images/rooms/living-room-2.jpg" alt="" width="160" height="120">
               Living room
             </button>
             <button type="button" class="sample-thumb" id="sample-bedroom" data-sample="bedroom" aria-pressed="false">
-              <img src="/images/rooms/bedroom.jpg" alt="" width="160" height="120">
-              Bedroom
+              <img src="images/rooms/bedroom-2.jpg" alt="" width="160" height="120"> Bedroom </button>
+            <button type="button" class="sample-thumb" id="sample-vanity" data-sample="vanity" aria-pressed="false">
+              <img src="images/rooms/bathroom-2.jpg" alt="" width="160" height="120"> Bathroom
+            </button>
+            <button type="button" class="sample-thumb" id="sample-entry" data-sample="entry" aria-pressed="false">
+              <img src="images/rooms/entryway-2.jpg" alt="" width="160" height="120"> Grand entrance
             </button>
           </div>
           <p class="viz-msg" id="photo-msg" role="status" aria-live="polite"></p>
@@ -524,6 +524,18 @@
         <section class="step" id="step-3" aria-labelledby="step-3-title" hidden>
           <h2 class="step-title" id="step-3-title" tabindex="-1">Pick a mirror</h2>
           <div class="mirror-cards" id="mirror-list" role="radiogroup" aria-labelledby="step-3-title"></div>
+          <div class="chip-row" role="group" aria-label="Mirror direction">
+            <span class="chip-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>
+              Hang it
+            </span>
+            <button type="button" class="chip" id="turn-v-3" data-turn="v" aria-pressed="true">Vertical</button>
+            <button type="button" class="chip" id="turn-h-3" data-turn="h" aria-pressed="false">Horizontal</button>
+          </div>
+          <button type="button" class="btn-big secondary" id="add-mirror-btn-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>
+            <span id="add-mirror-label-3">Add another mirror</span>
+          </button>
           <button type="button" class="btn-big" id="mirror-done-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5 9-10"/></svg>
             Done
@@ -536,8 +548,8 @@
           <div class="chosen">
             <span class="mirror-pic" id="chosen-pic"></span>
             <span>
-              <span class="chosen-name" id="chosen-name">Grand Royale Arch</span><br>
-              <span class="chosen-meta" id="chosen-meta">75 × 195 cm · $1,290</span>
+              <span class="chosen-name" id="chosen-name">Statement Curve – Gold</span><br>
+              <span class="chosen-meta" id="chosen-meta">200 cm high × 100 cm wide · $350</span>
             </span>
           </div>
           <p class="tip-row">
@@ -545,15 +557,28 @@
             <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>Drag room</span>
             <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 9v6M9 12h6"/></svg>Tap a wall</span>
           </p>
+          <div class="chip-row" role="group" aria-label="Mirror direction">
+            <span class="chip-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>
+              Turn
+            </span>
+            <button type="button" class="chip" id="turn-v" data-turn="v" aria-pressed="true">Vertical</button>
+            <button type="button" class="chip" id="turn-h" data-turn="h" aria-pressed="false">Horizontal</button>
+          </div>
           <button type="button" class="switch" id="lean-toggle" role="switch" aria-checked="true" hidden>
             <span id="lean-label">Leaning on the floor</span>
             <span class="switch-track" aria-hidden="true"></span>
           </button>
-          <button type="button" class="btn-big" id="add-to-bag-btn" data-add="grand-royale-arched-brass-floor-mirror">
+          <button type="button" class="btn-big" id="add-to-bag-btn" data-add="statement-curve-mirror-gold">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>
-            <span id="add-to-bag-label">Add to bag · $1,290</span>
+            <span id="add-to-bag-label">Add to bag · $350</span>
           </button>
-          <button type="button" class="btn-big secondary" id="start-again-btn">
+          <button type="button" class="btn-big secondary" id="add-mirror-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>
+              <span id="add-mirror-label">Add another mirror</span>
+            </button>
+            <button type="button" class="btn-big secondary" id="clear-mirrors-btn" style="display:none">Remove extra mirrors</button>
+            <button type="button" class="btn-big secondary" id="start-again-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
             Start again
           </button>
@@ -564,12 +589,12 @@
 
   <footer class="viz-footer">
     <div class="container">
-      <span>© 2026 Mirror House Melbourne. Previews are a guide. Your photo never leaves your device.</span>
-      <a href="/">Back to the shop</a>
+      <span>© 2026 Mirrorhousemelbourne · ABN 50 417 829 779. Previews are a guide. Your photo never leaves your device.</span>
+      <a href="index.html">Back to the shop</a>
     </div>
   </footer>
 
-  <script src="/js/store.js"></script>
+  <script src="js/store.js"></script>
   <script>
     // If the 3D module can't load (offline, blocked CDN), say so instead of spinning forever.
     setTimeout(function () {
