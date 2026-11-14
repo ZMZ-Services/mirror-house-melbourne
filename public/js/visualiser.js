@@ -849,6 +849,7 @@ function resize() {
     needsRender = true;
   }
   if (state.step === 2) layoutEditor();
+  else if (state.step >= 3 && !state.movedByHand) keepMirrorInView();
 }
 
 // Match the 3D camera's lens to the photo: the photo "covers" the viewport, eye level where it was.
@@ -1113,12 +1114,20 @@ function syncExtraUi() {
   if (lbl3) lbl3.textContent = txt;
 }
 // Move the current mirror along the wall so it doesn't sit on top of the ones already placed.
+// True when the current mirror, centred at s on wall wi, keeps a gap from every extra mirror on that wall.
+function clearOfExtras(wi, s) {
+  const w = footprint(mirror.def).w, gap = 0.25;
+  return extraMirrors.every((m) => {
+    if (m.wallIndex !== wi) return true;
+    const fw = footprint(m.def, m.turned).w;
+    return s + w / 2 + gap / 2 < m.s - fw / 2 || s - w / 2 - gap / 2 > m.s + fw / 2;
+  });
+}
 function offsetFromExtras() {
   if (!extraMirrors.length || !mirror || !state.layout || !state.place) return;
   const wall = currentWall(); if (!wall) return;
-  const def = footprint(mirror.def), gap = 0.25;
-  const taken = extraMirrors.filter((m) => m.wallIndex === state.mirrorWall).map((m) => { const fw = footprint(m.def, m.turned).w; return [m.s - fw / 2, m.s + fw / 2]; });
-  const free = (s) => s - def.w / 2 > 0.04 && s + def.w / 2 < wall.len - 0.04 && taken.every(([a, b]) => s + def.w / 2 + gap / 2 < a || s - def.w / 2 - gap / 2 > b);
+  const def = footprint(mirror.def);
+  const free = (s) => s - def.w / 2 > 0.04 && s + def.w / 2 < wall.len - 0.04 && clearOfExtras(state.mirrorWall, s);
   if (free(state.place.s)) return;
   let best = null;
   for (let d = 0.05; d < wall.len; d += 0.05) {
@@ -1133,6 +1142,7 @@ function addAnotherMirror() {
   extraMirrors.push(mirror);
   mirror = null;
   buildMirror();
+  state.movedByHand = false;
   offsetFromExtras();
   syncExtraUi();
   goStep(3);
@@ -1411,7 +1421,6 @@ function initPointer() {
     if (!p) return;
     const c = wallCoords(wl, p);
     drag = { id: e.pointerId, offS: state.place.s - c.s, offH: state.place.h - c.h };
-    state.movedByHand = true;
     controls.enabled = false;
     canvas.setPointerCapture(e.pointerId);
     el.viewport.classList.add('is-dragging');
@@ -1433,6 +1442,7 @@ function initPointer() {
       const c = wallCoords(wl, p);
       state.place.s = c.s + drag.offS;
       if (!isLeaning()) state.place.h = c.h + drag.offH;
+      state.movedByHand = true;
       placeMirror();
       return;
     }
@@ -1510,11 +1520,11 @@ function keepMirrorInView() {
   const L = state.layout;
   if (!mirror || !L || !camera) return;
   const want = 0.9; // a small margin inside the edges
-  if (mirrorViewFit() <= want) return;
+  if (mirrorViewFit() <= want && clearOfExtras(state.mirrorWall, state.place.s)) return;
   const start = { wall: state.mirrorWall, s: state.place.s };
   const walls = [start.wall].concat(L.walls.map((w) => w.i).filter((i) => i !== start.wall && fits(L.walls[i], mirrorDef())));
   // Best spot: one where the whole mirror fits (nearest the plan, its own wall first); failing that, the
-  // spot where the least of it is cut off.
+  // spot where the least of it is cut off. Never on top of another mirror.
   let best = null;
   for (const wi of walls) {
     const len = L.walls[wi].len, from = wi === start.wall ? start.s : len / 2;
@@ -1523,7 +1533,7 @@ function keepMirrorInView() {
       state.place.s = sv;
       placeMirror();
       const fit = mirrorViewFit();
-      const score = (fit <= want ? 0 : 10 + fit) + (wi === start.wall ? 0 : 1) + Math.abs(state.place.s - from) * 0.01;
+      const score = (clearOfExtras(wi, state.place.s) ? 0 : 100) + (fit <= want ? 0 : 10 + fit) + (wi === start.wall ? 0 : 1) + Math.abs(state.place.s - from) * 0.01;
       if (!best || score < best.score) best = { score, wall: wi, s: state.place.s };
     }
     if (best.score < 1) break; // fits on its own wall
@@ -2341,8 +2351,8 @@ function goStep(n) {
   needsRender = true;
   const title = $(`#step-${n}-title`);
   if (prev !== n && title) title.focus({ preventScroll: true });
-  // Sheet height changes with the step: keep sizes in sync, and keep the mirror in view unless it was placed by hand.
-  requestAnimationFrame(() => { resize(); if (n >= 3 && !state.movedByHand) keepMirrorInView(); });
+  // Sheet height changes with the step: keep sizes in sync (resize also keeps the mirror in view).
+  requestAnimationFrame(resize);
 }
 
 function initSteps() {
@@ -2399,6 +2409,11 @@ function boot() {
     get camera() { return camera; },
     get controls() { return controls; },
     mirrorViewFit() { return mirror ? mirrorViewFit() : null; },
+    // Every mirror in the room (extra ones first, the current one last): wall, centre along it and width.
+    mirrors() {
+      const one = (m, wall, s) => ({ wall, s, w: footprint(m.def, m.turned).w });
+      return extraMirrors.map((m) => one(m, m.wallIndex, m.s)).concat(mirror ? [one(mirror, state.mirrorWall, state.place.s)] : []);
+    },
     setPosts(posts) { state.posts = posts.map((p) => ({ ...p })); onPostsChanged(true); },
     mirrorScreenPoint() {
       if (!mirror) return null;
