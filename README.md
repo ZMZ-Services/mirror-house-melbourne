@@ -75,8 +75,8 @@ The database connection is provided by Netlify Database automatically (`NETLIFY_
 
 Production deploys are made by hand with the Netlify CLI (`npx netlify-cli deploy --build --prod`), never from
 pull requests. Deploy previews and branch deploys are switched off in `netlify.toml`, because Netlify Database would
-give each one a copy of the production data behind a public link. In the Netlify dashboard, also set
-Site configuration → Build & deploy → Continuous deployment → **Stop builds**, so merging to `main` doesn't deploy.
+give each one a copy of the production data behind a public link. The site isn't linked to Git in Netlify (it was a
+drag-and-drop site), so merging a pull request never deploys by itself.
 
 ## Run it locally
 
