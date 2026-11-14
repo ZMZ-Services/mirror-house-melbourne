@@ -21,7 +21,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const DEG = Math.PI / 180;
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -718,7 +717,7 @@ function hasWebGL2() {
   try { return !!document.createElement('canvas').getContext('webgl2'); } catch (e) { return false; }
 }
 
-let renderer, scene, camera, controls, roomMaterial, photoTexture;
+let renderer, scene, camera, controls, roomMaterial, photoTexture, keyLight, fillLight;
 const roomGroup = new THREE.Group();
 let wallMeshes = [];
 let mirror = null;
@@ -729,7 +728,10 @@ let lastGoodCam = new THREE.Vector3();
 function initThree() {
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.NoToneMapping;
+  // Filmic tone mapping for the mirror and frame. The room's ShaderMaterial and the glass have no
+  // tonemapping include, so the photo (and its reflection) paint exactly as taken.
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = EXPOSURE;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setClearColor(0x26201b, 1);
   const canvas = renderer.domElement;
@@ -743,12 +745,10 @@ function initThree() {
   });
 
   scene = new THREE.Scene();
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
-  pmrem.dispose();
-  const sun = new THREE.DirectionalLight(0xfff1dc, 2.2);
-  sun.position.set(2.5, 3.5, 2);
-  scene.add(sun, sun.target, new THREE.HemisphereLight(0xfff8ee, 0x8a7560, 0.35));
+  // Lights and the environment (the rebuilt room itself) are set from the photo: see matchLighting().
+  keyLight = new THREE.DirectionalLight(0xffffff, KEY);
+  fillLight = new THREE.HemisphereLight(0xffffff, 0xffffff, FILL);
+  scene.add(keyLight, keyLight.target, fillLight);
   scene.add(roomGroup);
 
   camera = new THREE.PerspectiveCamera(50, 1, 0.03, 120);
@@ -834,10 +834,11 @@ function initThree() {
 }
 
 function viewSize() { return { w: Math.max(1, el.viewport.clientWidth), h: Math.max(1, el.viewport.clientHeight) }; }
+// The reflection renders at 80% of the view's pixels: lighter on phones, and part of the glass's softness.
 function reflectorSize() {
   const { w, h } = viewSize();
-  const pr = renderer.getPixelRatio();
-  return { w: Math.min(2048, Math.round(w * pr)), h: Math.min(2048, Math.round(h * pr)) };
+  const pr = renderer.getPixelRatio() * 0.8;
+  return { w: Math.min(1280, Math.round(w * pr)), h: Math.min(1280, Math.round(h * pr)) };
 }
 
 // The view keeps the mirror in sight as its size changes (a step's sheet, turning a phone), until the shopper
@@ -987,6 +988,125 @@ function buildRoom() {
 }
 
 // ---------------------------------------------------------------------------
+// Light matched to the photo
+// ---------------------------------------------------------------------------
+// The photo is sampled on the device: overall and around the mirror for brightness and colour, its top
+// and bottom for the fill light's ceiling and floor bounce, and its brightest patch (a window, say) for
+// where the key light comes from. The rebuilt room is the frame's reflection environment. Once per photo:
+// the sampling grid, window and environment; on each placement: a few hundred grid cells.
+
+const EXPOSURE = 1.2;               // tone-mapping exposure for the mirror and frame
+const KEY = 2.2, FILL = 0.6, ENV = 1;   // key light, fill light and environment strengths at light level 1
+const LIGHT_REF = 0.5;              // linear luminance of a bright, white-walled room photo: light level 1
+const lightDir = new THREE.Vector3(0, 1, 1).normalize();   // towards the key light (world)
+const lit = { layout: null, grid: null, gw: 0, gh: 0, all: null, top: null, bottom: null, window: null, env: null, lum: 0, level: 1, warmth: 0 };
+const toLinear = Array.from({ length: 256 }, (_, i) => { const c = i / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+const luma = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+const WHITE = new THREE.Color(1, 1, 1);
+// A light's colour from a sampled one: its hue, half-way to white, at unit brightness.
+const hueOf = (c) => { const k = luma(c) || 1; return new THREE.Color(c[0] / k, c[1] / k, c[2] / k).lerp(WHITE, 0.5); };
+
+// Mean linear colour of the photo between image fractions (u0, v0) and (u1, v1), y down.
+function regionMean(u0, v0, u1, v1) {
+  const { gw, gh, grid } = lit;
+  const x0 = clamp(Math.floor(u0 * gw + 1e-6), 0, gw - 1), x1 = clamp(Math.ceil(u1 * gw - 1e-6), x0 + 1, gw);
+  const y0 = clamp(Math.floor(v0 * gh + 1e-6), 0, gh - 1), y1 = clamp(Math.ceil(v1 * gh - 1e-6), y0 + 1, gh);
+  const m = [0, 0, 0];
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) for (let j = 0; j < 3; j++) m[j] += grid[(y * gw + x) * 3 + j];
+  const n = (x1 - x0) * (y1 - y0);
+  return m.map((v) => v / n);
+}
+// Where a world point is in the photo (image fractions, y down), as the room shader projects it; null if behind.
+function photoPoint(L, p) {
+  const cp = Math.cos(L.pitch), sp = Math.sin(L.pitch);
+  const y = p.y * cp + p.z * sp, z = -p.y * sp + p.z * cp;
+  if (z > -0.05) return null;
+  return [(L.cx + L.f * p.x / -z) / L.w, (L.cy - L.f * y / -z) / L.h];
+}
+
+// Once per photo and layout.
+function lightRoom(L) {
+  lit.layout = L;
+  const gw = 64, gh = Math.max(8, Math.round(gw * state.photo.h / state.photo.w));
+  const c = document.createElement('canvas');
+  c.width = gw; c.height = gh;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(state.photo.canvas, 0, 0, gw, gh);
+  const px = ctx.getImageData(0, 0, gw, gh).data, grid = new Float32Array(gw * gh * 3);
+  for (let i = 0, j = 0; i < px.length; i += 4) { grid[j++] = toLinear[px[i]]; grid[j++] = toLinear[px[i + 1]]; grid[j++] = toLinear[px[i + 2]]; }
+  Object.assign(lit, { grid, gw, gh });
+  Object.assign(lit, { all: regionMean(0, 0, 1, 1), top: regionMean(0, 0, 1, 1 / 3), bottom: regionMean(0, 2 / 3, 1, 1) });
+
+  // A window: a near-white patch (1/16 of the width) well above the room's average. Found where the photo
+  // sees it on the rebuilt room, so the key light can come from there.
+  const B = 4;
+  let best = 0, bu = 0, bv = 0;
+  for (let y = 0; y + B <= gh; y += 2) for (let x = 0; x + B <= gw; x += 2) {
+    const l = luma(regionMean(x / gw, y / gh, (x + B) / gw, (y + B) / gh));
+    if (l > best) { best = l; bu = (x + B / 2) / gw; bv = (y + B / 2) / gh; }
+  }
+  lit.window = null;
+  if (best > 0.8 && best > 1.6 * luma(lit.all)) {
+    const cp = Math.cos(L.pitch), sp = Math.sin(L.pitch);
+    const rx = (bu * L.w - L.cx) / L.f, ry = -(bv * L.h - L.cy) / L.f;
+    const dir = new THREE.Vector3(rx, ry * cp + sp, ry * sp - cp).normalize();
+    const hit = new THREE.Raycaster(new THREE.Vector3(), dir).intersectObjects(roomGroup.children, false)[0];
+    lit.window = hit ? hit.point : dir.multiplyScalar(3);
+  }
+
+  // The rebuilt room, seen from the camera, is what the frame reflects.
+  const envScene = new THREE.Scene();
+  envScene.add(roomGroup);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  if (lit.env) lit.env.dispose();
+  lit.env = pmrem.fromScene(envScene, 0.02);
+  pmrem.dispose();
+  scene.add(roomGroup);
+  scene.environment = lit.env.texture;
+}
+
+// On each placement: light level and colour from the wall around the mirror (35 cm past its edges) and the
+// whole photo, so a dim warm room gives a dimmer, warmer frame. Then the key light's direction.
+const _centre = new THREE.Vector3(), _p = new THREE.Vector3();
+function matchLighting() {
+  const L = state.layout, wl = currentWall();
+  if (lit.layout !== L) lightRoom(L);
+  mirror.mount.updateMatrixWorld(true);
+  mirror.tilt.getWorldPosition(_centre);
+  const fp = footprint(mirror.def, mirror.turned), t = new THREE.Vector3(wl.t[0], 0, wl.t[1]), n = new THREE.Vector3(wl.n[0], 0, wl.n[1]);
+  let u0 = 1, v0 = 1, u1 = 0, v1 = 0, seen = 0;
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+    _p.copy(_centre).addScaledVector(t, sx * (fp.w / 2 + 0.35)).setY(_centre.y + sy * (fp.h / 2 + 0.35));
+    const q = photoPoint(L, _p);
+    if (!q) continue;
+    seen++;
+    u0 = Math.min(u0, q[0]); u1 = Math.max(u1, q[0]); v0 = Math.min(v0, q[1]); v1 = Math.max(v1, q[1]);
+  }
+  u0 = clamp(u0, 0, 1); u1 = clamp(u1, 0, 1); v0 = clamp(v0, 0, 1); v1 = clamp(v1, 0, 1);
+  const local = seen === 4 && u1 - u0 > 0.02 && v1 - v0 > 0.02 ? regionMean(u0, v0, u1, v1) : null;
+  const c = local ? lit.all.map((a, i) => a * 0.4 + local[i] * 0.6) : lit.all;
+  lit.lum = luma(c);
+  lit.level = clamp((Math.max(lit.lum, 1e-4) / LIGHT_REF) ** 0.6, 0.3, 1.4);
+  lit.warmth = (c[0] - c[2]) / (c[0] + c[1] + c[2] + 1e-4);
+  keyLight.color.copy(hueOf(c));
+  keyLight.intensity = KEY * lit.level;
+  fillLight.color.copy(hueOf(lit.top));
+  fillLight.groundColor.copy(hueOf(lit.bottom)).multiplyScalar(clamp(luma(lit.bottom) / (luma(lit.top) || 1), 0.3, 1));
+  fillLight.intensity = FILL * lit.level;
+  mirror.reflector.material.uniforms.sheen.value.copy(keyLight.color).multiplyScalar(0.05 * lit.level);
+
+  // From the window if the photo shows one, else from the camera's side of the room; a little from above,
+  // and never from behind the wall.
+  if (lit.window) lightDir.copy(lit.window).sub(_centre);
+  else lightDir.copy(_centre).negate().setY(0);
+  lightDir.normalize().add(_p.set(0, 0.6, 0)).normalize();
+  const dn = lightDir.dot(n);
+  if (dn < 0.3) lightDir.addScaledVector(n, 0.3 - dn).normalize();
+  keyLight.position.copy(_centre).addScaledVector(lightDir, 4);
+  keyLight.target.position.copy(_centre);
+}
+
+// ---------------------------------------------------------------------------
 // Mirror shapes
 // ---------------------------------------------------------------------------
 
@@ -1067,39 +1187,86 @@ function shapeFor(def, inset = 0) {
   return s;
 }
 
-function shadowTexture(def, margin, blurM, kind) {
-  const W = def.w + margin * 2, H = kind === 'floor' ? def._floorDepth + margin * 2 : def.h + margin * 2;
-  const cw = 160, ch = Math.round(clamp(cw * H / W, 32, 512));
+// Soft contact shadows, drawn on a small canvas at the mirror's real size (upright or turned) and used as
+// an alpha map. Wall: the outline, grown a little (the frame stands off the wall) and blurred: a tight layer
+// for the contact line, a wide one for the soft falloff. Floor (leaning): darkest along the bottom edge, a
+// shaded wedge back to the wall, a soft spread.
+const leanDepth = (def, fp) => fp.h * Math.sin(LEAN) + def.depth + 0.04;   // wall to just past the bottom edge
+function shadowTexture(def, turned, kind, blurM) {
+  const fp = footprint(def, turned), margin = blurM * 1.5 + 0.02;
+  const W = fp.w + margin * 2, H = (kind === 'floor' ? leanDepth(def, fp) : fp.h) + margin * 2;
+  const cw = 224, ch = Math.round(clamp(cw * H / W, 24, 640)), k = cw / W, off = cw * 3;
   const c = document.createElement('canvas');
   c.width = cw; c.height = ch;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cw, ch);
-  const k = cw / W, off = cw * 3;
-  ctx.shadowColor = '#fff'; ctx.shadowBlur = Math.max(2, blurM * k); ctx.shadowOffsetX = off;
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.shadowOffsetX = off;
   ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  if (kind === 'floor') ctx.rect(margin * k - off, margin * k, def.w * k, def._floorDepth * k);
-  else {
-    shapeFor(def, 0).getPoints(64).forEach((p, i) => {
-      const x = (p.x + W / 2) * k - off, y = (H / 2 - p.y) * k;
-      if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
-    });
-    ctx.closePath();
+  // Only the blurred shadow lands on the canvas: the shape itself is drawn off to the left.
+  const layer = (blur, alpha, path) => {
+    ctx.shadowBlur = Math.max(1, blur * k);
+    ctx.shadowColor = `rgba(255,255,255,${alpha})`;
+    ctx.beginPath(); path(); ctx.fill();
+  };
+  // Metres: x across the mirror, y away from the wall (floor).
+  const rect = (x, y, w, h) => ctx.rect((margin + x) * k - off, (margin + y) * k, w * k, h * k);
+  if (kind === 'floor') {
+    const edge = fp.h * Math.sin(LEAN);
+    layer(blurM, 0.45, () => rect(0, 0, fp.w, edge));
+    layer(blurM * 0.2, 0.85, () => rect(0.01, edge - 0.005, fp.w - 0.02, def.depth + 0.015));
+    layer(blurM * 1.8, 0.3, () => rect(0, edge, fp.w, 0.1));
+  } else {
+    layer(blurM, 1, () => shapeFor(def, -blurM * 0.35).getPoints(64).forEach((p, i) => {
+      const x = turned ? -p.y : p.x, y = turned ? p.x : p.y;   // turned: a quarter turn, as in placeMirror
+      const X = (x + W / 2) * k - off, Y = (H / 2 - y) * k;
+      if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y);
+    }));
   }
-  ctx.fill();
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.NoColorSpace;
   return { tex, W, H };
 }
-function shadowMesh(def, kind, opacity) {
-  const { tex, W, H } = shadowTexture(def, kind === 'floor' ? 0.12 : 0.1, kind === 'floor' ? 0.08 : 0.05, kind);
+function shadowMesh(def, turned, kind, blurM) {
+  const { tex, W, H } = shadowTexture(def, turned, kind, blurM);
   const mat = new THREE.MeshBasicMaterial({
-    color: 0x000000, alphaMap: tex, transparent: true, opacity, depthWrite: false,
+    color: 0x000000, alphaMap: tex, transparent: true, depthWrite: false,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
   });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), mat);
   mesh.renderOrder = 1;
+  if (kind === 'floor') mesh.rotation.x = -Math.PI / 2;
   return mesh;
+}
+// (Re)make the current mirror's shadows when it's turned or leaned; otherwise they're only moved.
+function fitShadows(lean) {
+  const key = `${mirror.turned}|${lean}`;
+  if (mirror.shadowKey === key) return;
+  Object.values(mirror.shadows).forEach((m) => {
+    mirror.mount.remove(m); m.geometry.dispose(); m.material.alphaMap.dispose(); m.material.dispose();
+  });
+  const def = mirror.def;
+  mirror.shadows = { contact: shadowMesh(def, mirror.turned, 'wall', 0.03), soft: shadowMesh(def, mirror.turned, 'wall', 0.07) };
+  if (lean) mirror.shadows.floor = shadowMesh(def, mirror.turned, 'floor', 0.05);
+  Object.values(mirror.shadows).forEach((m) => mirror.mount.add(m));
+  mirror.shadowKey = key;
+}
+// Shadows for the placed mirror. The contact layer is the ambient occlusion right at the frame's edge;
+// the soft layer is the key light's shadow, falling away from it as far as the frame stands off the wall
+// (kept small: indoor light is mostly diffuse).
+const _toMount = new THREE.Quaternion();
+function placeShadows(lean, cy) {
+  fitShadows(lean);
+  const d = lightDir.clone().applyQuaternion(_toMount.copy(mirror.mount.quaternion).invert());
+  const dz = Math.max(d.z, 0.5), gap = STANDOFF + mirror.def.depth;
+  const sx = clamp(-d.x / dz * gap, -0.03, 0.03), sy = clamp(-d.y / dz * gap, -0.04, 0);
+  const { contact, soft, floor } = mirror.shadows;
+  const drop = lean ? 0.03 : 0;
+  contact.position.set(sx * 0.15, cy - 0.004 - drop, 0.003);
+  soft.position.set(sx, cy + sy - drop, 0.0025);
+  contact.material.opacity = lean ? 0.3 : 0.65;
+  soft.material.opacity = lean ? 0.35 : 0.5;
+  if (floor) floor.position.set(0, 0.003, leanDepth(mirror.def, footprint(mirror.def, mirror.turned)) / 2);
 }
 
 // Extra mirrors: earlier picks stay in the room while the customer adds and moves another one.
@@ -1254,6 +1421,49 @@ function addCurves(def, tilt, pickables, glassZ, material) {
   arc(-d, -t0, t0);                     // right-bulging arc
 }
 
+// Mirror glass: the Reflector's view of the room, a touch soft (reduced resolution plus a small blur),
+// faintly green-grey (silvered glass reflects about 88%), brighter towards grazing angles (fresnel), with a
+// sheen of the key light at grazing angles. No tone mapping, so the reflected room matches the room.
+const GLASS_TINT = 0xf0f5f2;
+const GlassShader = {
+  name: 'MirrorGlass',
+  uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, sheen: { value: new THREE.Color(0, 0, 0) } },
+  vertexShader: /* glsl */`
+    uniform mat4 textureMatrix;
+    varying vec4 vUv;
+    varying vec3 vView;
+    varying vec3 vNormal;
+    #include <common>
+    #include <logdepthbuf_pars_vertex>
+    void main() {
+      vUv = textureMatrix * vec4(position, 1.0);
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vView = -mv.xyz;
+      vNormal = normalMatrix * vec3(0.0, 0.0, 1.0);
+      gl_Position = projectionMatrix * mv;
+      #include <logdepthbuf_vertex>
+    }`,
+  fragmentShader: /* glsl */`
+    uniform vec3 color;
+    uniform vec3 sheen;
+    uniform sampler2D tDiffuse;
+    varying vec4 vUv;
+    varying vec3 vView;
+    varying vec3 vNormal;
+    #include <logdepthbuf_pars_fragment>
+    void main() {
+      #include <logdepthbuf_fragment>
+      vec2 uv = vUv.xy / vUv.w;
+      vec2 d = 0.5 / vec2(textureSize(tDiffuse, 0));
+      vec3 c = texture2D(tDiffuse, uv).rgb * 0.6
+        + (texture2D(tDiffuse, uv + d).rgb + texture2D(tDiffuse, uv - d).rgb
+          + texture2D(tDiffuse, uv + vec2(d.x, -d.y)).rgb + texture2D(tDiffuse, uv + vec2(-d.x, d.y)).rgb) * 0.1;
+      float f = pow(1.0 - clamp(dot(normalize(vView), normalize(vNormal)), 0.0, 1.0), 2.0);
+      gl_FragColor = vec4(c * color * (1.0 + 0.35 * f) + sheen * f, 1.0);
+      #include <colorspace_fragment>
+    }`
+};
+
 function buildMirror() {
   if (!renderer) return;
   disposeMirror();
@@ -1269,7 +1479,7 @@ function buildMirror() {
       depth: def.depth - 0.004, curveSegments: 72, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.0018, bevelSegments: 3
     });
     geo.translate(0, 0, 0.002);
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: def.frameColor || BRASS, metalness: def.frameMetal ?? 1, roughness: def.frameRough ?? 0.28, envMapIntensity: 0.8 }));
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: def.frameColor || BRASS, metalness: def.frameMetal ?? 1, roughness: def.frameRough ?? 0.28, envMapIntensity: ENV }));
     tilt.add(m); pickables.push(m);
     glassZ = def.depth - 0.009;
     if (def.curves) addCurves(def, tilt, pickables, glassZ, m.material);
@@ -1284,25 +1494,19 @@ function buildMirror() {
       depth: 0.003, curveSegments: 64, bevelEnabled: true, bevelThickness: 0.0015, bevelSize: 0.0035, bevelSegments: 3
     });
     geo.translate(0, 0, 0.0015);
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xdfe3e1, metalness: 0.65, roughness: 0.14, emissive: 0x3a3e3d, envMapIntensity: 1.3 }));
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xdfe3e1, metalness: 0.65, roughness: 0.14, emissive: 0x3a3e3d, envMapIntensity: ENV * 1.6 }));
     tilt.add(m); pickables.push(m);
     glassZ = 0.0042;
   }
   const rs = reflectorSize();
   const reflector = new Reflector(new THREE.ShapeGeometry(shapeFor(def, def.frame > 0 ? def.frame - 0.003 : 0.0105), 72), {
-    textureWidth: rs.w, textureHeight: rs.h, color: 0xb9bcba, clipBias: 0.003
+    textureWidth: rs.w, textureHeight: rs.h, color: GLASS_TINT, clipBias: 0.003, multisample: 0, shader: GlassShader
   });
   reflector.position.z = glassZ;
   tilt.add(reflector); pickables.push(reflector);
 
-  const wallShadow = shadowMesh(def, 'wall', 0.4);
-  mount.add(wallShadow);
-  def._floorDepth = def.h * Math.sin(LEAN) + def.depth + 0.04;
-  const floorShadow = shadowMesh(def, 'floor', 0.7);
-  floorShadow.rotation.x = -Math.PI / 2;
-  mount.add(floorShadow);
   scene.add(mount);
-  mirror = { def, mount, tilt, reflector, pickables, wallShadow, floorShadow, turned: state.turned };
+  mirror = { def, mount, tilt, reflector, pickables, shadows: {}, shadowKey: '', turned: state.turned };
   placeMirror();
 }
 
@@ -1360,11 +1564,8 @@ function placeMirror() {
   mirror.tilt.position.set(0, cy, cz);
   const spin = mirror.turned ? Math.PI / 2 : 0;   // horizontal: turn the whole mirror a quarter on the wall
   mirror.tilt.rotation.set(-th, 0, spin);
-  mirror.wallShadow.position.set(0, cy - (lean ? 0.03 : 0.018), 0.003);
-  mirror.wallShadow.rotation.z = spin;
-  mirror.wallShadow.material.opacity = lean ? 0.2 : 0.4;
-  mirror.floorShadow.visible = lean;
-  mirror.floorShadow.position.set(0, 0.003, def._floorDepth / 2);
+  matchLighting();
+  placeShadows(lean, cy);
   needsRender = true;
 }
 
@@ -2449,6 +2650,14 @@ function boot() {
     get camera() { return camera; },
     get controls() { return controls; },
     mirrorViewFit() { return mirror ? mirrorViewFit() : null; },
+    // Light matched to the photo (read-only copy): level 1 is a bright white room; warmth > 0 is warm.
+    get light() {
+      return {
+        level: lit.level, lum: lit.lum, warmth: lit.warmth, window: !!lit.window,
+        key: keyLight ? keyLight.intensity : 0, dir: lightDir.toArray(),
+        toneMapping: renderer ? renderer.toneMapping : null
+      };
+    },
     // Every mirror in the room (extra ones first, the current one last): wall, centre along it and width.
     mirrors() {
       const one = (m, wall, s) => ({ wall, s, w: footprint(m.def, m.turned).w });
