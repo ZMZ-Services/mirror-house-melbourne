@@ -414,6 +414,7 @@ const state = {
   source: 'living',          // living | bedroom | upload
   preset: SAMPLES.living,
   photo: null,               // { canvas, w, h }
+  movedByHand: false,        // the shopper has dragged or tapped the mirror into place (don't move it for them)
   posts: SAMPLES.living.posts.map((p) => ({ ...p })),
   lens: 66, lensMode: 'manual',
   ceilingH: 2.7, ceilingMode: true, camH: 1.4,
