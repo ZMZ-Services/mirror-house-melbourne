@@ -752,6 +752,7 @@ function initThree() {
   controls.zoomSpeed = 0.7;
   controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
   controls.addEventListener('change', () => { needsRender = true; });
+  controls.addEventListener('start', () => { lookedAround = true; });
   reduceMotion.addEventListener?.('change', () => { controls.enableDamping = !reduceMotion.matches; });
 
   roomMaterial = new THREE.ShaderMaterial({
@@ -831,9 +832,13 @@ function reflectorSize() {
   return { w: Math.min(2048, Math.round(w * pr)), h: Math.min(2048, Math.round(h * pr)) };
 }
 
+// The view keeps the mirror in sight as its size changes (a step's sheet, turning a phone), until the shopper
+// places the mirror or looks around themselves.
+let lookedAround = false, lastSize = '';
 function resize() {
+  const { w, h } = viewSize(), sized = lastSize !== w + 'x' + h;
+  lastSize = w + 'x' + h;
   if (renderer) {
-    const { w, h } = viewSize();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(w, h, false);
     fitCameraLens();
@@ -841,7 +846,7 @@ function resize() {
     needsRender = true;
   }
   if (state.step === 2) layoutEditor();
-  else if (state.step >= 3 && !state.movedByHand) keepMirrorInView();
+  else if (sized && state.step >= 3 && !state.movedByHand && !lookedAround) keepMirrorInView();
 }
 
 // Match the 3D camera's lens to the photo: the photo "covers" the viewport, eye level where it was.
@@ -866,6 +871,7 @@ function fitCameraLens() {
 function resetView() {
   const L = state.layout;
   if (!L || !controls) return;
+  lookedAround = false;
   const dist = clamp(L.walls[L.mainWall] ? L.walls[L.mainWall].dist : 4, 1.5, MAX_DIST);
   camera.position.set(0, 0, 0);
   camera.up.set(0, 1, 0);
@@ -1108,7 +1114,7 @@ function syncExtraUi() {
 // Move the current mirror along the wall so it doesn't sit on top of the ones already placed.
 // True when the current mirror, centred at s on wall wi, keeps a gap from every extra mirror on that wall.
 function clearOfExtras(wi, s) {
-  const w = footprint(mirror.def).w, gap = 0.25;
+  const w = footprint(mirror.def, mirror.turned).w, gap = 0.25;
   return extraMirrors.every((m) => {
     if (m.wallIndex !== wi) return true;
     const fw = footprint(m.def, m.turned).w;
@@ -1136,6 +1142,7 @@ function addAnotherMirror() {
   buildMirror();
   state.movedByHand = false;
   offsetFromExtras();
+  keepMirrorInView();
   syncExtraUi();
   goStep(3);
 }
