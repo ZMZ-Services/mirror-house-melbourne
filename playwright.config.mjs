@@ -5,6 +5,7 @@ import { E2E_DB, MOCK, SITE } from './e2e/env.mjs';
 
 export default defineConfig({
   testDir: 'e2e',
+  testIgnore: /viz-.*\.spec\.mjs$/, // the visualiser has its own config (playwright.viz.config.mjs)
   globalSetup: './e2e/global-setup.mjs',
   workers: 1,
   fullyParallel: false,
